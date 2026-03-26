@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   AI Video Studio — Frontend Logic (Optimized)
+   AI Video Studio — Frontend Logic (Dark Refined)
    ═══════════════════════════════════════════════════════════ */
 
 const App = {
@@ -10,14 +10,102 @@ const App = {
   extendModes: {},
   _reconnectTimer: null,
   _processing: false,
+  _currentStep: 0, // 0=upload, 1=workspace, 2=processing, 3=result
 
   async init() {
+    this.initParticles();
     this.bindEvents();
     await this.loadEffects();
     this.connectWS();
   },
 
-  // ── API ──────────────────────────────────────────────
+  // ── Particle Background ───────────────────────────
+  initParticles() {
+    const canvas = document.getElementById('bgCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, particles = [];
+    const COUNT = 40;
+    const SPEED = 0.15;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 1.5 + 0.5,
+        dx: (Math.random() - 0.5) * SPEED,
+        dy: (Math.random() - 0.5) * SPEED,
+        o: Math.random() * 0.3 + 0.1,
+      });
+    }
+
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (const p of particles) {
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(124, 92, 252, ${p.o})`;
+        ctx.fill();
+      }
+      // Connect nearby particles
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 180) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(124, 92, 252, ${0.06 * (1 - dist / 180)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    };
+    draw();
+  },
+
+  // ── Step Indicator ────────────────────────────────
+  setStep(step) {
+    this._currentStep = step;
+    const items = document.querySelectorAll('.step-item');
+    const connectors = document.querySelectorAll('.step-connector');
+    items.forEach((el, i) => {
+      el.classList.remove('active', 'completed');
+      if (i < step) el.classList.add('completed');
+      if (i === step) el.classList.add('active');
+    });
+    connectors.forEach((el, i) => {
+      el.classList.toggle('active', i < step);
+    });
+    // Allow clicking completed steps to go back
+    items.forEach((el, i) => {
+      if (i < step && step !== 2) {
+        // Can go back to completed steps (except during processing)
+        el.style.cursor = 'pointer';
+      } else {
+        el.style.cursor = 'default';
+      }
+    });
+  },
+
+  // ── API ───────────────────────────────────────────
   async loadEffects() {
     try {
       const res = await fetch('/api/effects');
@@ -42,13 +130,14 @@ const App = {
     const zone = document.getElementById('uploadZone');
     const inner = zone.querySelector('.upload-inner');
     const loading = document.getElementById('uploadLoading');
-    const loadText = loading.querySelector('p');
+    const loadText = document.getElementById('uploadProgressText');
+    const fillBar = document.getElementById('uploadProgressFill');
 
     inner.style.display = 'none';
     loading.style.display = 'block';
     loadText.textContent = '上传中... 0%';
+    fillBar.style.width = '0%';
 
-    // Use XMLHttpRequest for upload progress
     const form = new FormData();
     form.append('file', file);
 
@@ -61,6 +150,7 @@ const App = {
           if (e.lengthComputable) {
             const pct = Math.round((e.loaded / e.total) * 100);
             loadText.textContent = `上传中... ${pct}%`;
+            fillBar.style.width = pct + '%';
           }
         };
 
@@ -76,7 +166,6 @@ const App = {
             reject(new Error('上传失败'));
           }
         };
-
         xhr.onerror = () => reject(new Error('网络错误'));
         xhr.send(form);
       });
@@ -88,6 +177,7 @@ const App = {
       this.toast(e.message, 'error');
       inner.style.display = '';
       loading.style.display = 'none';
+      fillBar.style.width = '0%';
     }
   },
 
@@ -140,7 +230,7 @@ const App = {
     }
   },
 
-  // ── WebSocket ────────────────────────────────────────
+  // ── WebSocket ──────────────────────────────────────
   connectWS() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
 
@@ -171,9 +261,10 @@ const App = {
     };
   },
 
-  // ── UI Updates ───────────────────────────────────────
+  // ── UI State Management ────────────────────────────
   showWorkspace(data) {
     this._showSection('workspace');
+    this.setStep(1);
 
     const video = document.getElementById('previewVideo');
     video.src = `/api/preview/${data.file_id}`;
@@ -190,8 +281,10 @@ const App = {
 
   showProcessing(icon, name) {
     this._showSection('processingPanel');
+    this.setStep(2);
     document.getElementById('processingIcon').textContent = icon;
-    document.getElementById('processingTitle').textContent = `正在应用: ${name}`;
+    document.getElementById('processingTitle').textContent = `正在应用`;
+    document.getElementById('processingEffectName').textContent = name;
     document.getElementById('progressFill').style.width = '0%';
     document.getElementById('progressText').textContent = '0%';
     document.getElementById('progressDetail').textContent = '初始化...';
@@ -201,24 +294,34 @@ const App = {
   setStatus(text, color) {
     const pill = document.getElementById('statusPill');
     pill.querySelector('span:last-child').textContent = text;
-    pill.querySelector('.status-dot').style.background = color;
+    const dot = pill.querySelector('.status-dot');
+    dot.style.background = color;
+    // Update glow color
+    const glowMap = {
+      'var(--orange)': 'rgba(251,146,60,0.3)',
+      'var(--green)': 'var(--green-glow)',
+      'var(--red)': 'var(--red-glow)',
+    };
+    dot.style.boxShadow = `0 0 8px ${glowMap[color] || 'transparent'}`;
   },
 
   updateProgress(data) {
+    const pct = Math.round(data.progress);
     document.getElementById('progressFill').style.width = data.progress + '%';
-    document.getElementById('progressText').textContent = Math.round(data.progress) + '%';
+    document.getElementById('progressText').textContent = pct + '%';
     document.getElementById('progressDetail').textContent = data.message || '';
 
     if (data.status === 'done') {
       this._processing = false;
       this.setStatus('完成', 'var(--green)');
-      setTimeout(() => this.showResult(), 400);
+      setTimeout(() => this.showResult(), 500);
     } else if (data.status === 'error') {
       this._processing = false;
       this.setStatus('出错', 'var(--red)');
       this.toast('处理出错: ' + (data.message || '未知错误'), 'error');
       setTimeout(() => {
         this._showSection('workspace');
+        this.setStep(1);
         this.setStatus('就绪', 'var(--green)');
       }, 3000);
     }
@@ -226,6 +329,7 @@ const App = {
 
   showResult() {
     this._showSection('resultPanel');
+    this.setStep(3);
     const url = `/api/download/${this.currentTaskId}`;
     document.getElementById('resultVideo').src = url;
     document.getElementById('btnDownload').href = url;
@@ -234,10 +338,46 @@ const App = {
   _showSection(id) {
     const sections = ['uploadZone', 'workspace', 'processingPanel', 'resultPanel'];
     for (const s of sections) {
-      document.getElementById(s).style.display = s === id ? '' : 'none';
+      const el = document.getElementById(s);
+      if (s === id) {
+        el.style.display = '';
+        el.style.animation = 'none';
+        el.offsetHeight; // trigger reflow
+        el.style.animation = '';
+      } else {
+        el.style.display = 'none';
+      }
     }
   },
 
+  // ── Continue Editing ───────────────────────────────
+  async continueEditing() {
+    if (!this.currentTaskId) return;
+
+    const btn = document.getElementById('btnBackToEdit');
+    btn.textContent = '⏳ 加载中...';
+    btn.disabled = true;
+
+    try {
+      const form = new FormData();
+      form.append('task_id', this.currentTaskId);
+      const res = await fetch('/api/import-result', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || '导入失败');
+
+      this.fileId = data.file_id;
+      this.currentTaskId = null;
+      this.showWorkspace(data);
+      this.toast('已加载处理结果，可继续编辑', 'success');
+    } catch (e) {
+      this.toast('继续编辑失败: ' + e.message, 'error');
+    } finally {
+      btn.innerHTML = '<span>🔄</span> 继续编辑';
+      btn.disabled = false;
+    }
+  },
+
+  // ── Render ─────────────────────────────────────────
   renderEffects() {
     const grid = document.getElementById('effectsGrid');
     grid.innerHTML = '';
@@ -297,34 +437,7 @@ const App = {
     document.getElementById('extendVal').textContent = slider.value + 'x';
   },
 
-  // ── Continue Editing ─────────────────────────────────
-  async continueEditing() {
-    if (!this.currentTaskId) return;
-
-    const btn = document.getElementById('btnBackToEdit');
-    btn.textContent = '⏳ 加载中...';
-    btn.disabled = true;
-
-    try {
-      const form = new FormData();
-      form.append('task_id', this.currentTaskId);
-      const res = await fetch('/api/import-result', { method: 'POST', body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || '导入失败');
-
-      this.fileId = data.file_id;
-      this.currentTaskId = null;
-      this.showWorkspace(data);
-      this.toast('已加载处理结果，可继续编辑', 'success');
-    } catch (e) {
-      this.toast('继续编辑失败: ' + e.message, 'error');
-    } finally {
-      btn.textContent = '🔄 继续编辑';
-      btn.disabled = false;
-    }
-  },
-
-  // ── Events ───────────────────────────────────────────
+  // ── Events ─────────────────────────────────────────
   bindEvents() {
     const zone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
@@ -372,15 +485,30 @@ const App = {
     this._bindSlider('intensity', 'intensityVal', v => Math.round(v * 100) + '%');
     this._bindSlider('extendSlider', 'extendVal', v => v + 'x');
 
-    // Navigation buttons
-    document.getElementById('btnNew').addEventListener('click', () => this._confirmReset());
+    // Navigation
+    document.getElementById('btnBackToUpload').addEventListener('click', () => {
+      if (!this._processing) this._confirmReset();
+    });
     document.getElementById('btnNewVideo').addEventListener('click', () => this._confirmReset());
     document.getElementById('btnBackToEdit').addEventListener('click', () => this.continueEditing());
 
-    // Keyboard shortcuts
+    // Step bar clicks (go back to completed steps)
+    document.getElementById('stepsBar').addEventListener('click', (e) => {
+      const stepEl = e.target.closest('.step-item');
+      if (!stepEl || this._processing) return;
+      const step = parseInt(stepEl.dataset.step);
+      if (step < this._currentStep && this._currentStep !== 2) {
+        if (step === 0) this._confirmReset();
+        if (step === 1 && this._currentStep === 3) {
+          this._showSection('workspace');
+          this.setStep(1);
+        }
+      }
+    });
+
+    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this._processing) {
-        // Can't cancel yet, but show feedback
         this.toast('处理中无法取消，请等待完成', 'error');
       }
     });
@@ -411,8 +539,10 @@ const App = {
     this.currentTaskId = null;
     this._processing = false;
     this._showSection('uploadZone');
+    this.setStep(0);
     document.querySelector('.upload-inner').style.display = '';
     document.getElementById('uploadLoading').style.display = 'none';
+    document.getElementById('uploadProgressFill').style.width = '0%';
     document.getElementById('fileInput').value = '';
     this.setStatus('就绪', 'var(--green)');
   },
@@ -423,9 +553,12 @@ const App = {
     el.className = `toast ${type}`;
     el.textContent = msg;
     container.appendChild(el);
-    // Limit max toasts
     while (container.children.length > 5) container.firstChild.remove();
-    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(50px)';
+      setTimeout(() => el.remove(), 300);
+    }, 4000);
   },
 };
 
