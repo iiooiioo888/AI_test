@@ -1,276 +1,219 @@
-# Enterprise AI Video Production Platform (AVP)
+<div align="center">
 
-<p align="center">
-  <strong>企業級 AI 視頻生產平台</strong><br>
-  <sub>端到端視頻生成系統 · 劇本創作 · 提示詞優化 · 智能擴展 · 生產管理</sub>
-</p>
+# 🎬 AVP — AI Video Production Platform
 
-<p align="center">
-  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.135-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
-  <a href="https://pytorch.org"><img src="https://img.shields.io/badge/PyTorch-2.6-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"></a>
-  <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
-  <a href="https://neo4j.com"><img src="https://img.shields.io/badge/Neo4j-5.x-018BFF?style=for-the-badge&logo=neo4j&logoColor=white" alt="Neo4j"></a>
-  <a href="https://milvus.io"><img src="https://img.shields.io/badge/Milvus-2.5-00A1EA?style=for-the-badge&logo=milvus&logoColor=white" alt="Milvus"></a>
-  <a href="https://kubernetes.io"><img src="https://img.shields.io/badge/Kubernetes-1.29-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" alt="Kubernetes"></a>
-</p>
+**企業級 AI 視頻生產平台**
 
----
+端到端視頻生成 · 劇本創作 · 提示詞優化 · 智能擴展 · 生產管理
 
-## 📋 目錄
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.6-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Neo4j](https://img.shields.io/badge/Neo4j-5.x-018BFF?style=flat-square&logo=neo4j&logoColor=white)](https://neo4j.com)
+[![Milvus](https://img.shields.io/badge/Milvus-2.5-00A1EA?style=flat-square&logo=milvus&logoColor=white)](https://milvus.io)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.29-326CE5?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](#授權)
 
-- [概述](#概述)
-- [核心模組](#核心模組)
-- [系統架構](#系統架構)
-- [技術棧](#技術棧)
-- [快速開始](#快速開始)
-- [API 文檔](#api-文檔)
-- [部署指南](#部署指南)
-- [安全合規](#安全合規)
-- [開發進度](#-開發進度)
-- [任務待開發](#-任務待開發)
+</div>
 
 ---
 
-## 概述
+## ✨ 核心特性
 
-Enterprise AI Video Production Platform (AVP) 是一套端到端的企業級 AI 視頻生成系統，涵蓋從劇本創作、提示詞優化、視頻生成、智能擴展到生產管理的全鏈路閉環。
-
-### 核心優勢
-
-| 特性 | 描述 |
-|------|------|
-| **JSON 結構化場景** | 採用 JSON 結構化存儲場景，支持版本控制與分支管理 |
-| **知識圖譜** | Neo4j 存儲角色/情節/道具依賴關係，實現漣漪效應分析 |
-| **狀態機** | 嚴格的場景区生命周期管理 (DRAFT → REVIEW → LOCKED → QUEUED → GENERATING → COMPLETED) |
-| **CRDT 協作** | 支持多人實時編輯，字段級權限控制 (RBAC) |
-| **RAG 提示詞優化** | 集成向量檢索，自動生成負向提示詞與權重調整 |
-| **一致性鎖定** | 角色 ID、風格向量、場景約束跨片段鎖定 |
-| **企業級監控** | Prometheus + Grafana 全鏈路監控 |
+| | |
+|:---:|:---|
+| 🧩 | **JSON 結構化場景** — 版本控制 + 分支管理，場景即數據 |
+| 🕸️ | **知識圖譜** — Neo4j 角色/情節/道具依賴，漣漪效應自動分析 |
+| ⚙️ | **狀態機** — 嚴格生命周期 `DRAFT → REVIEW → LOCKED → … → COMPLETED` |
+| 🤝 | **CRDT 協作** — 多人實時編輯，字段級鎖 + 向量時鐘 |
+| 🔍 | **RAG 提示詞優化** — 向量檢索歷史案例，自動負向提示詞 |
+| 🔒 | **一致性鎖定** — 角色 ID / 風格向量 / 場景約束跨片段鎖定 |
+| 📊 | **企業級監控** — Prometheus + Grafana 全鏈路可觀測 |
 
 ---
 
-## 核心模組
+## 🏗️ 系統架構
 
-### 1. 敘事與劇本引擎 (Narrative Engine)
+```mermaid
+graph TB
+    subgraph Client["🖥️ Client Layer"]
+        WEB["Web App<br/><i>Next.js</i>"]
+        MOB["Mobile App<br/><i>React Native</i>"]
+        SDK["API Clients<br/><i>SDK / CLI</i>"]
+    end
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Narrative Engine                       │
-├─────────────────────────────────────────────────────────┤
-│  • JSON 結構化場景存儲                                    │
-│  • Neo4j 知識圖譜 (角色/情節/道具依賴)                    │
-│  • 場景区生命周期狀態機                                   │
-│  • CRDT 多人實時編輯                                     │
-│  • 漣漪效應分析                                          │
-│  • 多版本分支管理                                        │
-└─────────────────────────────────────────────────────────┘
-```
+    subgraph Gateway["🔀 API Gateway (Kong)"]
+        GW["Rate Limiting · Auth · Load Balancing"]
+    end
 
-**關鍵指標:**
-- 場景修改觸發全局連貫性檢查 < 100ms
-- 支持 100+ 協作者同時編輯
-- 版本歷史保留 90 天
+    subgraph Services["⚡ FastAPI Cluster"]
+        AUTH["Auth Service"]
+        NARR["Narrative<br/>Engine"]
+        PROM["Prompt<br/>Engine"]
+        GEN["Generation<br/>Engine"]
+    end
 
-### 2. 提示詞優化模組 (Prompt Engineering Core)
+    subgraph Data["💾 Data Layer"]
+        PG[("PostgreSQL<br/>業務數據")]
+        N4J[("Neo4j<br/>知識圖譜")]
+        MIL[("Milvus<br/>向量檢索")]
+        RDS[("Redis<br/>緩存/隊列")]
+    end
 
-```
-┌─────────────────────────────────────────────────────────┐
-│               Prompt Engineering Core                    │
-├─────────────────────────────────────────────────────────┤
-│  輸入解析 → 優化生成 (LLM + 進化算法) → 質量評估 → 輸出適配  │
-│                                                         │
-│  • RAG 檢索歷史成功案例                                   │
-│  • 自動生成負向提示詞                                    │
-│  • 提示詞版本控制 (Git-like)                             │
-│  • 標籤系統與模板市場                                    │
-└─────────────────────────────────────────────────────────┘
-```
+    subgraph Infra["☁️ Kubernetes Cluster"]
+        GPU["GPU Workers<br/>SVD · AnimateDiff · ControlNet"]
+        S3["MinIO / S3"]
+        MON["Prometheus<br/>+ Grafana"]
+    end
 
-**目標指標:**
-- 一次成功率 > 85%
-- 提示詞復用率 > 60%
-
-### 3. 視頻生成與擴展引擎 (Video Generation & Continuation)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│            Video Generation & Continuation               │
-├─────────────────────────────────────────────────────────┤
-│  核心模型：SVD, AnimateDiff, ControlNet, IP-Adapter      │
-│                                                         │
-│  • 線性延續 / 分支劇情 / 實時直播擴展                     │
-│  • 無縫幀融合                                            │
-│  • 角色 ID (FaceID) 鎖定                                 │
-│  • 風格向量 (LoRA) 鎖定                                  │
-│  • 場景約束 (Depth Map) 鎖定                             │
-│  • 分塊流式生成 → 邊界融合 → 質量閉環                    │
-└─────────────────────────────────────────────────────────┘
+    WEB & MOB & SDK --> GW
+    GW --> AUTH & NARR & PROM & GEN
+    AUTH & NARR & PROM & GEN --> PG & N4J & MIL & RDS
+    GEN --> GPU
+    GPU --> S3
+    MON -.-> Services
+    MON -.-> GPU
 ```
 
-### 4. 生產控制與 MLOps (Production Control)
+<details>
+<summary>📐 詳細架構圖 (展開)</summary>
 
+```mermaid
+graph LR
+    subgraph NarrativeEngine["📖 Narrative Engine"]
+        NE1["SceneObject<br/>敘事/對話/視覺/音頻/過渡"]
+        NE2["KnowledgeGraph<br/>BFS 漣漪效應"]
+        NE3["StateMachine<br/>7 態生命周期"]
+        NE4["CRDT Engine<br/>LWW 字段級衝突"]
+    end
+
+    subgraph PromptEngine["🧠 Prompt Engineering"]
+        PE1["RAG 檢索"]
+        PE2["進化算法優化"]
+        PE3["版本控制"]
+    end
+
+    subgraph VideoEngine["🎥 Video Generation"]
+        VE1["SVD / AnimateDiff"]
+        VE2["ControlNet / IP-Adapter"]
+        VE3["無縫幀融合"]
+    end
+
+    subgraph MLOps["🔧 Production Control"]
+        MO1["雙向同步"]
+        MO2["GPU 調度"]
+        MO3["C2PA 水印"]
+        MO4["合規預檢"]
+    end
+
+    NE1 --> PE1
+    PE2 --> VE1
+    VE1 --> MO1
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  Production Control                      │
-├─────────────────────────────────────────────────────────┤
-│  • 雙向同步：劇本修改 → 視頻重生成                        │
-│  • Kubernetes GPU 集群調度                               │
-│  • Prometheus + Grafana 監控                            │
-│  • 內容合規預檢 (Azure Content Safety)                  │
-│  • 數字水印 (C2PA)                                      │
-│  • 操作審計日誌                                          │
-└─────────────────────────────────────────────────────────┘
-```
+
+</details>
 
 ---
 
-## 系統架構
+## 🧱 核心模組
+
+### 📖 1. 敘事與劇本引擎 — ✅ 已完成
+
+- **JSON 結構化場景** — SceneObject 完整模型（敘事/對話/視覺/音頻/過渡）
+- **Neo4j 知識圖譜** — 角色/道具/場景依賴圖 + BFS 漣漪效應分析
+- **狀態機** — 嚴格 7 態生命周期（`DRAFT→REVIEW→LOCKED→QUEUED→GENERATING→COMPLETED/FAILED`）
+- **CRDT 協作** — LWW-Element-Set 字段級衝突解決 + 向量時鐘
+- **RBAC 權限** — 5 角色（admin/director/writer/reviewer/viewer）字段級控制
+- **版本分支** — 場景分支創建 + 父版本追蹤
+- **小說改編** — 文本自動拆分為結構化場景
+- **一致性檢查** — 全局圖完整性 + 漣漪效應分析
+- **API 層** — FastAPI 完整 CRUD + 狀態轉換 + 分支端點
+- **CI/CD** — GitHub Actions 自動化部署 pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                            Client Layer                              │
-│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────────────┐   │
-│  │  Web App     │  │  Mobile App   │  │  API Clients            │   │
-│  │  (Next.js)   │  │  (React Native)│  │  (SDK / CLI)            │   │
-│  └──────┬───────┘  └───────┬───────┘  └───────────┬─────────────┘   │
-└─────────┼──────────────────┼───────────────────────┼─────────────────┘
-          │ HTTPS/WSS        │ HTTPS/WSS             │ HTTPS
-┌─────────▼──────────────────▼───────────────────────▼─────────────────┐
-│                         API Gateway (Kong)                            │
-│         Rate Limiting · Authentication · Load Balancing               │
-└────────────────────────────────┬──────────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼──────────────────────────────────────┐
-│                      FastAPI Application Cluster                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
-│  │  Auth       │  │  Narrative  │  │  Prompt     │  │  Generation │  │
-│  │  Service    │  │  Service    │  │  Service    │  │  Service    │  │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  │
-└────────────────────────────────┬──────────────────────────────────────┘
-                                 │
-          ┌──────────────────────┼──────────────────────┐
-          │                      │                      │
-┌─────────▼─────────┐  ┌────────▼──────────┐  ┌────────▼──────────┐    │
-│   PostgreSQL      │  │    Neo4j          │  │    Milvus         │    │
-│   (業務數據)       │  │    (知識圖譜)      │  │    (向量檢索)      │    │
-│                   │  │                   │  │                   │    │
-│  - Users/RBAC     │  │  - Characters     │  │  - Prompts        │    │
-│  - Projects       │  │  - Relationships  │  │  - Scenes         │    │
-│  - Scenes         │  │  - Dependencies   │  │  - Styles         │    │
-│  - Generation     │  │  - Ripple Effect  │  │  - Similarity     │    │
-│  - Audit Logs     │  │                   │  │                   │    │
-└───────────────────┘  └───────────────────┘  └───────────────────┘    │
-          │
-┌─────────▼──────────────────────────────────────────────────────────┐
-│                        Kubernetes Cluster                           │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                    GPU Worker Nodes                           │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │  │
-│  │  │ SVD      │  │ Animate  │  │ Control  │  │ IP-      │     │  │
-│  │  │ Worker   │  │ Diff     │  │ Net      │  │ Adapter  │     │  │
-│  │  │          │  │ Worker   │  │ Worker   │  │ Worker   │     │  │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
-│  │  Redis          │  │  MinIO/S3       │  │  Prometheus     │     │
-│  │  (Cache/Queue)  │  │  (Storage)      │  │  (Monitoring)   │     │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘     │
-└─────────────────────────────────────────────────────────────────────┘
+app/narrative_engine/
+├── models/          # SceneObject, Character, Prop, StoryArc
+├── graph/           # KnowledgeGraphService (漣漪效應分析)
+├── services/        # NarrativeEngine (編排), StateMachine
+├── crdt/            # CRDTEngine (LWW 字段級衝突解決)
+└── api/             # FastAPI Routes (/api/v1/narrative/*)
 ```
+
+### 🧠 2. 提示詞優化引擎 — 🔜 規劃中
+
+`輸入解析 → 優化生成 (LLM + 進化算法) → 質量評估 → 輸出適配`
+
+> **目標:** 一次成功率 > 85% · 提示詞復用率 > 60%
+
+### 🎥 3. 視頻生成與擴展引擎 — 🔜 規劃中
+
+> SVD · AnimateDiff · ControlNet · IP-Adapter — 線性延續 / 分支劇情 / 實時直播擴展
+
+### 🔧 4. 生產控制與 MLOps — 🔜 規劃中
+
+> 雙向同步 · K8s GPU 調度 · Prometheus 監控 · C2PA 數字水印 · Azure Content Safety
 
 ---
 
-## 技術棧
+## 🛠️ 技術棧
 
-| 層級 | 技術 | 版本 | 用途 |
-|------|------|------|------|
-| **Backend** | FastAPI | 0.135+ | RESTful API |
-| | Python | 3.10+ | 運行環境 |
-| | PyTorch | 2.6+ | 深度学习框架 |
-| **Database** | PostgreSQL | 16+ | 業務數據 |
-| | Neo4j | 5.x | 知識圖譜 |
-| | Milvus | 2.5+ | 向量檢索 |
-| | Redis | 7.x | 緩存/隊列 |
-| **AI/ML** | Diffusers | 0.32+ | 視頻生成模型 |
-| | Transformers | 4.49+ | LLM 集成 |
-| | OpenCV | 4.x | 圖像處理 |
-| **Infra** | Kubernetes | 1.29+ | 容器編排 |
-| | Docker | 25.x | 容器化 |
-| | Terraform | 1.x | IaC |
-| **Monitoring** | Prometheus | 2.x | 指標收集 |
-| | Grafana | 10.x | 可視化 |
-| | Structlog | 25.x | 結構化日誌 |
-| **Security** | OAuth 2.0 | - | 認證 |
-| | Vault | - | 密鑰管理 |
-| | C2PA | - | 數字水印 |
+<div align="center">
+
+| 層級 | 技術 |
+|:---:|:---|
+| **Backend** | `FastAPI` `Python 3.10+` `PyTorch 2.6` |
+| **Database** | `PostgreSQL 16` `Neo4j 5.x` `Milvus 2.5` `Redis 7` |
+| **AI/ML** | `Diffusers` `Transformers` `OpenCV` |
+| **Infra** | `Kubernetes 1.29` `Docker 25` `Terraform` |
+| **Observability** | `Prometheus` `Grafana` `Structlog` |
+| **Security** | `OAuth 2.0` `Vault` `C2PA` |
+
+</div>
 
 ---
 
-## 快速開始
+## 🚀 快速開始
 
-### 環境需求
+### 前置需求
 
-| 依賴 | 最低版本 | 用途 |
-|------|---------|------|
-| Python | 3.10 | 運行環境 |
-| PostgreSQL | 16 | 業務數據庫 |
-| Neo4j | 5.x | 知識圖譜 |
-| Milvus | 2.5 | 向量檢索 |
-| Redis | 7 | 緩存 |
-| Docker | 25 | 容器化 |
-| NVIDIA GPU | RTX 3090+ | 視頻生成 |
+`Python 3.10+` · `PostgreSQL 16` · `Neo4j 5.x` · `Milvus 2.5` · `Redis 7` · `Docker 25` · `NVIDIA GPU (RTX 3090+)`
 
-### 安裝
+### 安裝與啟動
 
 ```bash
-# 克隆代碼庫
-git clone https://github.com/iiooiioo888/AI_test.git
-cd AI_test
+# 克隆
+git clone https://github.com/iiooiioo888/AI_test.git && cd AI_test
 
-# 創建虛擬環境
+# 虛擬環境
 python3 -m venv venv && source venv/bin/activate
 
-# 安裝依賴
+# 依賴
 pip install -r requirements.txt
 
-# 配置環境變數
-cp .env.example .env
-# 編輯 .env 文件，配置數據庫連接等
+# 配置
+cp .env.example .env   # ← 編輯此文件，填入資料庫連線等
 
-# 初始化數據庫
+# 初始化 & 啟動
 python -m app.db.init
-
-# 啟動應用
 python -m app.main
 ```
 
-### 啟動服務
-
 ```bash
-# 開發環境
-python -m app.main
-
 # 生產環境 (多 worker)
 uvicorn app.main:app --host 0.0.0.0 --port 8888 --workers 4
 
 # Docker Compose
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
 
-## API 文檔
+## 📡 API 端點
 
-啟動應用後訪問：
-- Swagger UI: http://localhost:8888/docs
-- ReDoc: http://localhost:8888/redoc
-- OpenAPI JSON: http://localhost:8888/openapi.json
-
-### 核心端點
+啟動後訪問 → [Swagger UI](http://localhost:8888/docs) · [ReDoc](http://localhost:8888/redoc) · [OpenAPI JSON](http://localhost:8888/openapi.json)
 
 | 方法 | 路徑 | 說明 |
-|------|------|------|
+|:---:|:---|:---|
 | `POST` | `/api/v1/scenes/` | 創建場景 |
 | `GET` | `/api/v1/scenes/{id}` | 獲取場景詳情 |
 | `POST` | `/api/v1/scenes/{id}/transition` | 狀態轉換 |
@@ -280,12 +223,12 @@ docker-compose up -d
 
 ---
 
-## 部署指南
+## 🚢 部署
 
-### Docker Compose (開發環境)
+<details>
+<summary>🐳 Docker Compose (開發環境)</summary>
 
 ```yaml
-version: '3.8'
 services:
   api:
     build: .
@@ -303,14 +246,14 @@ services:
   postgres:
     image: postgres:16
     environment:
-      - POSTGRES_DB=avp
-      - POSTGRES_USER=avp
-      - POSTGRES_PASSWORD=password
+      POSTGRES_DB: avp
+      POSTGRES_USER: avp
+      POSTGRES_PASSWORD: password
 
   neo4j:
     image: neo4j:5
     environment:
-      - NEO4J_AUTH=neo4j/password
+      NEO4J_AUTH: neo4j/password
 
   milvus:
     image: milvusdb/milvus:v2.5.0
@@ -319,107 +262,129 @@ services:
     image: redis:7
 ```
 
-### Kubernetes (生產環境)
+</details>
 
-詳見 `kubernetes/` 目錄。
+<details>
+<summary>☸️ Kubernetes (生產環境)</summary>
 
----
+詳見 [`kubernetes/`](kubernetes/) 目錄。
 
-## 安全合規
-
-### SOC2/ISO27001 合規
-
-- ✅ 字段級加密 (AES-256)
-- ✅ 審計日誌 (不可篡改)
-- ✅ RBAC 權限控制
-- ✅ 操作審計追蹤
-- ✅ 數據備份與災備恢復
-- ✅ C2PA 數字水印
-
-### 內容安全
-
-- Azure Content Safety 集成
-- 敏感詞過濾
-- 版權保護 (圖像指紋)
+</details>
 
 ---
 
-## 🔄 開發進度
+## 🔐 安全合規
 
-### ✅ 模塊 1：敘事與劇本引擎 (Narrative Engine) — 已完成
+**SOC2 / ISO27001**
 
-| 組件 | 狀態 | 說明 |
-|------|------|------|
-| **JSON 結構化場景** | ✅ | SceneObject 完整數據模型 (敘事/對話/視覺/音頻/過渡) |
-| **Neo4j 知識圖譜** | ✅ | 角色/道具/場景依賴圖 + BFS 漣漪效應分析 |
-| **狀態機** | ✅ | 嚴格 7 態生命周期 (DRAFT→REVIEW→LOCKED→QUEUED→GENERATING→COMPLETED/FAILED) |
-| **CRDT 協作** | ✅ | LWW-Element-Set 字段級衝突解決 + 向量時鐘 |
-| **RBAC 權限** | ✅ | 5 角色 (admin/director/writer/reviewer/viewer) 字段級控制 |
-| **版本分支** | ✅ | 場景分支創建 + 父版本追蹤 |
-| **小說改編** | ✅ | 文本自動拆分為結構化場景 |
-| **一致性檢查** | ✅ | 全局圖完整性 + 漣漪效應分析 |
-| **API 層** | ✅ | FastAPI 完整 CRUD + 狀態轉換 + 分支端點 |
-| **CI/CD** | ✅ | GitHub Actions 自動化部署 pipeline |
+| ✅ | 控制項 |
+|:---:|:---|
+| 🔑 | 字段級加密 (AES-256) |
+| 📝 | 不可篡改審計日誌 |
+| 👥 | RBAC 權限控制 |
+| 🔍 | 操作審計追蹤 |
+| 💾 | 數據備份與災備恢復 |
+| 🏷️ | C2PA 數字水印 |
 
+**內容安全:** Azure Content Safety · 敏感詞過濾 · 圖像指紋版權保護
+
+---
+
+## 📊 開發進度
+
+```mermaid
+gantt
+    title AVP 開發路線圖
+    dateFormat  YYYY-MM
+    axisFormat  %Y-%m
+
+    section 核心引擎
+    敘事與劇本引擎       :done,    m1, 2025-10, 2026-03
+    提示詞優化引擎       :active,  m2, 2026-03, 2026-06
+    視頻生成引擎         :         m3, 2026-06, 2026-09
+    生產控制 MLOps       :         m4, 2026-09, 2026-12
+
+    section 基礎設施
+    CI/CD Pipeline      :done,    ci, 2025-10, 2026-01
+    K8s GPU 調度         :active,  k8s, 2026-02, 2026-05
+    監控 & 可觀測        :         mon, 2026-05, 2026-07
 ```
-app/narrative_engine/
-├── models/          # SceneObject, Character, Prop, StoryArc
-├── graph/           # KnowledgeGraphService (漣漪效應分析)
-├── services/        # NarrativeEngine (編排), StateMachine
-├── crdt/            # CRDTEngine (LWW 字段級衝突解決)
-└── api/             # FastAPI Routes (/api/v1/narrative/*)
-```
 
-### 🔜 模塊 2：提示詞優化引擎 (Prompt Engineering Core) — 規劃中
-
-### 🔜 模塊 3：視頻生成與擴展引擎 — 規劃中
-
-### 🔜 模塊 4：生產控制與 MLOps — 規劃中
+| 模塊 | 狀態 | 進度 |
+|:---|:---:|:---:|
+| 1. 敘事與劇本引擎 | ✅ 完成 | ██████████ 100% |
+| 2. 提示詞優化引擎 | 🔜 規劃中 | ░░░░░░░░░░ 0% |
+| 3. 視頻生成引擎 | 🔜 規劃中 | ░░░░░░░░░░ 0% |
+| 4. 生產控制 MLOps | 🔜 規劃中 | ░░░░░░░░░░ 0% |
 
 ---
 
 ## 📋 任務待開發
 
-### 任務：構建企業級 AI 敘事與劇本管理核心
+### 構建企業級 AI 敘事與劇本管理核心
 
-> **Role:** 高級後端架構師 (敘事系統專項)
-> **Context:** 項目 Nexus — 企業級 AI 視頻生產平台
+> **Role:** 高級後端架構師 · **Context:** 項目 Nexus
 
-#### 1. 數據模型 (Data Model)
+<details>
+<summary><strong>1. 數據模型 (Data Model)</strong></summary>
 
-- **關係型 (PostgreSQL)**: 定義 `scenes` 表，包含 JSONB 字段 `content` (對白/動作), `metadata` (時長/地點), `status` (狀態機)。必須包含 `version` (SemVer) 與 `audit_log` (操作審計)。
-- **圖數據庫 (Neo4j)**: 定義節點 `Scene`, `Character`, `Prop`。建立關係 `LEADS_TO` (劇情順序), `CONTAINS` (包含角色), `REQUIRES` (道具依賴)。創建唯一約束與索引。
-- **向量庫 (Milvus)**: 存儲場景語義向量 (768 維)，用於相似度檢索與衝突檢測。
+- **PostgreSQL** — `scenes` 表，JSONB `content` / `metadata` / `status`，含 `version` (SemVer) + `audit_log`
+- **Neo4j** — 節點 `Scene` · `Character` · `Prop`，關係 `LEADS_TO` / `CONTAINS` / `REQUIRES`，唯一約束 + 索引
+- **Milvus** — 768 維場景語義向量，相似度檢索 + 衝突檢測
 
-#### 2. 核心邏輯 (Core Logic)
+</details>
 
-- **狀態機**: 實現 `SceneStateMachine` 類，嚴格控制 `DRAFT` → `REVIEW` → `LOCKED` → `COMPLETED` 轉移，非法轉移拋出 `StateTransitionError`。
-- **漣漪效應**: 實現 `RippleEffectAnalyzer` 類。當場景修改時，遍歷 Neo4j `LEADS_TO` 關係，檢查後續場景的角色狀態 (如：死亡後不能出現) 與道具邏輯。返回衝突報告。
-- **協作同步**: 集成 Yjs (CRDT 算法)，支持多人實時編輯同一劇本字段，實現字段級鎖 (Field-Level Lock)。
+<details>
+<summary><strong>2. 核心邏輯 (Core Logic)</strong></summary>
 
-#### 3. API 規範 (API Contract)
+- **`SceneStateMachine`** — `DRAFT → REVIEW → LOCKED → COMPLETED`，非法轉移拋 `StateTransitionError`
+- **`RippleEffectAnalyzer`** — 遍歷 `LEADS_TO` 關係，檢查角色/道具邏輯衝突，返回報告
+- **CRDT 協作** — Yjs 多人實時編輯，字段級鎖 (Field-Level Lock)
+
+</details>
+
+<details>
+<summary><strong>3. API 規範 (API Contract)</strong></summary>
 
 | 方法 | 路徑 | 說明 |
-|------|------|------|
-| `PATCH` | `/scenes/{id}` | 支持部分更新，觸發漣漪分析。返回 200 (成功) 或 409 (衝突) |
-| `GET` | `/scripts/{id}/graph` | 返回劇情依賴圖譜 (JSON 格式) |
-| `POST` | `/scenes/{id}/branch` | 創建劇情分支，複製後續節點並生成新版本 ID |
+|:---:|:---|:---|
+| `PATCH` | `/scenes/{id}` | 部分更新 + 漣漪分析 → `200` / `409` |
+| `GET` | `/scripts/{id}/graph` | 劇情依賴圖譜 JSON |
+| `POST` | `/scenes/{id}/branch` | 劇情分支，複製節點 + 新版本 ID |
 
-#### 4. CI/CD 與交付 (CI/CD & Deliverables)
+</details>
 
-- **CI/CD**: GitHub Actions pipeline，包含 lint、type-check、構建與自動部署。
-- **交付**: Alembic 遷移腳本，Neo4j 初始化 Cypher，Python 服務代碼 (FastAPI)，OpenAPI 文檔。
-- **要求**: 代碼必須包含類型註解 (Type Hints)，錯誤處理邏輯，結構化日誌。
+<details>
+<summary><strong>4. CI/CD 與交付</strong></summary>
+
+- **CI/CD** — GitHub Actions：lint → type-check → build → deploy
+- **交付物** — Alembic 遷移腳本 · Neo4j 初始化 Cypher · FastAPI 服務代碼 · OpenAPI 文檔
+- **代碼規範** — Type Hints · 錯誤處理 · 結構化日誌
+
+</details>
 
 ---
 
-## 授權
+## 🤝 貢獻
 
-本專案以 MIT 授權條款釋出。
+1. Fork 本倉庫
+2. 創建特性分支 (`git checkout -b feat/amazing-feature`)
+3. 提交變更 (`git commit -m 'feat: add amazing feature'`)
+4. 推送分支 (`git push origin feat/amazing-feature`)
+5. 開啟 Pull Request
+
+請確保所有 PR 通過 CI/CD pipeline 並附帶對應文檔更新。
 
 ---
 
-## 聯繫
+## 📄 授權
 
-- GitHub: https://github.com/iiooiioo888/AI_test
-- 文檔：https://docs.openclaw.ai
+本專案以 [MIT](LICENSE) 授權條款釋出。
+
+---
+
+<div align="center">
+
+[GitHub](https://github.com/iiooiioo888/AI_test) · [文檔](https://docs.openclaw.ai)
+
+</div>
