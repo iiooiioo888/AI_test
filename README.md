@@ -1,218 +1,205 @@
 <div align="center">
 
-# 🎬 AVP — AI Video Production Platform
+<img src="https://raw.githubusercontent.com/iiooiioo888/AI_test/main/assets/avp-banner.svg" alt="AVP Banner" width="100%">
 
-**企業級 AI 視頻生產平台**
+# AVP
 
-端到端視頻生成 · 劇本創作 · 提示詞優化 · 智能擴展 · 生產管理
+**Enterprise AI Video Production Platform** · 企業級 AI 視頻生產平台
 
+> 從劇本到銀幕 — 端到端 AI 視頻生成系統
+
+&nbsp;
+
+[![CI](https://img.shields.io/github/actions/workflow/status/iiooiioo888/AI_test/ci.yml?branch=main&style=flat-square&label=CI&color=2ea44f)](https://github.com/iiooiioo888/AI_test/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.6-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Neo4j](https://img.shields.io/badge/Neo4j-5.x-018BFF?style=flat-square&logo=neo4j&logoColor=white)](https://neo4j.com)
-[![Milvus](https://img.shields.io/badge/Milvus-2.5-00A1EA?style=flat-square&logo=milvus&logoColor=white)](https://milvus.io)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.29-326CE5?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](#授權)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+
+&nbsp;
+
+[**快速開始**](#-快速開始) · [**架構**](#️-架構) · [**API**](#-api) · [**路線圖**](#-路線圖) · [**貢獻**](#-貢獻)
 
 </div>
 
 ---
 
-## ✨ 核心特性
+## 為什麼是 AVP？
 
-| | |
-|:---:|:---|
-| 🧩 | **JSON 結構化場景** — 版本控制 + 分支管理，場景即數據 |
-| 🕸️ | **知識圖譜** — Neo4j 角色/情節/道具依賴，漣漪效應自動分析 |
-| ⚙️ | **狀態機** — 嚴格生命周期 `DRAFT → REVIEW → LOCKED → … → COMPLETED` |
-| 🤝 | **CRDT 協作** — 多人實時編輯，字段級鎖 + 向量時鐘 |
-| 🔍 | **RAG 提示詞優化** — 向量檢索歷史案例，自動負向提示詞 |
-| 🔒 | **一致性鎖定** — 角色 ID / 風格向量 / 場景約束跨片段鎖定 |
-| 📊 | **企業級監控** — Prometheus + Grafana 全鏈路可觀測 |
+| 傳統流程 | AVP 方式 |
+|:---|:---|
+| 手動剪輯、逐幀調整 | AI 端到端自動生成 |
+| 劇本與視頻割裂管理 | JSON 結構化場景 ↔ 視圖雙向同步 |
+| 改一個場景，全片重來 | 知識圖譜漣漪分析，精準定位影響範圍 |
+| 單人作業，版本混亂 | CRDT 多人實時編輯，字段級鎖 |
+| 無法追溯 | 不可篡改審計日誌 + C2PA 數字水印 |
 
 ---
 
-## 🏗️ 系統架構
+## ✨ 特性
 
-```mermaid
-graph TB
-    subgraph Client["🖥️ Client Layer"]
-        WEB["Web App<br/><i>Next.js</i>"]
-        MOB["Mobile App<br/><i>React Native</i>"]
-        SDK["API Clients<br/><i>SDK / CLI</i>"]
-    end
+<table>
+<tr>
+<td width="50%">
 
-    subgraph Gateway["🔀 API Gateway (Kong)"]
-        GW["Rate Limiting · Auth · Load Balancing"]
-    end
+### 📖 智能敘事引擎
 
-    subgraph Services["⚡ FastAPI Cluster"]
-        AUTH["Auth Service"]
-        NARR["Narrative<br/>Engine"]
-        PROM["Prompt<br/>Engine"]
-        GEN["Generation<br/>Engine"]
-    end
+- JSON 結構化場景（敘事/對話/視覺/音頻/過渡）
+- Neo4j 知識圖譜 — 角色 · 道具 · 情節依賴
+- BFS 漣漪效應分析 — 改一個場景，自動檢查全片連貫性
+- 7 態嚴格生命周期：`DRAFT → REVIEW → LOCKED → QUEUED → GENERATING → COMPLETED / FAILED`
 
-    subgraph Data["💾 Data Layer"]
-        PG[("PostgreSQL<br/>業務數據")]
-        N4J[("Neo4j<br/>知識圖譜")]
-        MIL[("Milvus<br/>向量檢索")]
-        RDS[("Redis<br/>緩存/隊列")]
-    end
+</td>
+<td width="50%">
 
-    subgraph Infra["☁️ Kubernetes Cluster"]
-        GPU["GPU Workers<br/>SVD · AnimateDiff · ControlNet"]
-        S3["MinIO / S3"]
-        MON["Prometheus<br/>+ Grafana"]
-    end
+### 🤝 實時協作
 
-    WEB & MOB & SDK --> GW
-    GW --> AUTH & NARR & PROM & GEN
-    AUTH & NARR & PROM & GEN --> PG & N4J & MIL & RDS
-    GEN --> GPU
-    GPU --> S3
-    MON -.-> Services
-    MON -.-> GPU
-```
+- Yjs CRDT — 無衝突多人編輯
+- 向量時鐘 + LWW-Element-Set 衝突解決
+- 字段級鎖 — 精確到單一對白行
+- RBAC 5 角色：admin · director · writer · reviewer · viewer
 
-<details>
-<summary>📐 詳細架構圖 (展開)</summary>
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🧠 提示詞優化 *(規劃中)*
+
+- RAG 檢索歷史成功案例
+- LLM + 進化算法自動優化
+- 自動生成負向提示詞 + 權重
+- 提示詞版本控制 (Git-like)
+
+</td>
+<td width="50%">
+
+### 🎥 視頻生成 *(規劃中)*
+
+- SVD · AnimateDiff · ControlNet · IP-Adapter
+- 角色 ID (FaceID) + 風格向量 (LoRA) + 場景約束 (Depth Map) 鎖定
+- 分塊流式生成 → 邊界融合 → 質量閉環
+- 線性延續 / 分支劇情 / 實時直播擴展
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗️ 架構
 
 ```mermaid
 graph LR
-    subgraph NarrativeEngine["📖 Narrative Engine"]
-        NE1["SceneObject<br/>敘事/對話/視覺/音頻/過渡"]
-        NE2["KnowledgeGraph<br/>BFS 漣漪效應"]
-        NE3["StateMachine<br/>7 態生命周期"]
-        NE4["CRDT Engine<br/>LWW 字段級衝突"]
+    subgraph clients[" "]
+        direction LR
+        WEB["🌐 Web<br/><code>Next.js</code>"]
+        MOB["📱 Mobile<br/><code>RN</code>"]
+        CLI["⌨️ CLI / SDK"]
     end
 
-    subgraph PromptEngine["🧠 Prompt Engineering"]
-        PE1["RAG 檢索"]
-        PE2["進化算法優化"]
-        PE3["版本控制"]
+    subgraph api[" "]
+        GW["🔀 Kong Gateway<br/>Rate Limit · Auth · LB"]
     end
 
-    subgraph VideoEngine["🎥 Video Generation"]
-        VE1["SVD / AnimateDiff"]
-        VE2["ControlNet / IP-Adapter"]
-        VE3["無縫幀融合"]
+    subgraph services[" "]
+        direction TB
+        S1["Auth"]
+        S2["📖 Narrative"]
+        S3["🧠 Prompt"]
+        S4["🎥 Generation"]
     end
 
-    subgraph MLOps["🔧 Production Control"]
-        MO1["雙向同步"]
-        MO2["GPU 調度"]
-        MO3["C2PA 水印"]
-        MO4["合規預檢"]
+    subgraph data[" "]
+        PG[("🐘 PostgreSQL")]
+        N4J[("🕸️ Neo4j")]
+        MIL[("🔍 Milvus")]
+        RDS[("⚡ Redis")]
     end
 
-    NE1 --> PE1
-    PE2 --> VE1
-    VE1 --> MO1
+    subgraph compute[" "]
+        GPU["🖥️🖥️🖥️ GPU Cluster<br/>SVD · AnimateDiff · ControlNet"]
+        S3B["📦 MinIO / S3"]
+    end
+
+    WEB & MOB & CLI --> GW
+    GW --> S1 & S2 & S3 & S4
+    S1 & S2 & S3 & S4 --> PG & N4J & MIL & RDS
+    S4 --> GPU
+    GPU --> S3B
+
+    style clients fill:none,stroke:none
+    style api fill:none,stroke:none
+    style services fill:none,stroke:none
+    style data fill:none,stroke:none
+    style compute fill:none,stroke:none
+```
+
+<details>
+<summary>📖 敘事引擎內部結構</summary>
+
+```mermaid
+graph TD
+    A["SceneObject<br/><i>JSONB content · metadata · status</i>"] --> B["StateMachine<br/><i>7 態轉換</i>"]
+    A --> C["KnowledgeGraph<br/><i>Neo4j LEADS_TO · CONTAINS · REQUIRES</i>"]
+    A --> D["CRDT Engine<br/><i>Yjs 字段級同步</i>"]
+    C --> E["RippleEffectAnalyzer<br/><i>BFS 遍歷衝突檢測</i>"]
+    B --> F["StateTransitionError<br/><i>非法轉移攔截</i>"]
+    E --> G["衝突報告<br/><i>409 Conflict</i>"]
 ```
 
 </details>
 
 ---
 
-## 🧱 核心模組
-
-### 📖 1. 敘事與劇本引擎 — ✅ 已完成
-
-- **JSON 結構化場景** — SceneObject 完整模型（敘事/對話/視覺/音頻/過渡）
-- **Neo4j 知識圖譜** — 角色/道具/場景依賴圖 + BFS 漣漪效應分析
-- **狀態機** — 嚴格 7 態生命周期（`DRAFT→REVIEW→LOCKED→QUEUED→GENERATING→COMPLETED/FAILED`）
-- **CRDT 協作** — LWW-Element-Set 字段級衝突解決 + 向量時鐘
-- **RBAC 權限** — 5 角色（admin/director/writer/reviewer/viewer）字段級控制
-- **版本分支** — 場景分支創建 + 父版本追蹤
-- **小說改編** — 文本自動拆分為結構化場景
-- **一致性檢查** — 全局圖完整性 + 漣漪效應分析
-- **API 層** — FastAPI 完整 CRUD + 狀態轉換 + 分支端點
-- **CI/CD** — GitHub Actions 自動化部署 pipeline
-
-```
-app/narrative_engine/
-├── models/          # SceneObject, Character, Prop, StoryArc
-├── graph/           # KnowledgeGraphService (漣漪效應分析)
-├── services/        # NarrativeEngine (編排), StateMachine
-├── crdt/            # CRDTEngine (LWW 字段級衝突解決)
-└── api/             # FastAPI Routes (/api/v1/narrative/*)
-```
-
-### 🧠 2. 提示詞優化引擎 — 🔜 規劃中
-
-`輸入解析 → 優化生成 (LLM + 進化算法) → 質量評估 → 輸出適配`
-
-> **目標:** 一次成功率 > 85% · 提示詞復用率 > 60%
-
-### 🎥 3. 視頻生成與擴展引擎 — 🔜 規劃中
-
-> SVD · AnimateDiff · ControlNet · IP-Adapter — 線性延續 / 分支劇情 / 實時直播擴展
-
-### 🔧 4. 生產控制與 MLOps — 🔜 規劃中
-
-> 雙向同步 · K8s GPU 調度 · Prometheus 監控 · C2PA 數字水印 · Azure Content Safety
-
----
-
 ## 🛠️ 技術棧
 
-<div align="center">
-
-| 層級 | 技術 |
-|:---:|:---|
-| **Backend** | `FastAPI` `Python 3.10+` `PyTorch 2.6` |
-| **Database** | `PostgreSQL 16` `Neo4j 5.x` `Milvus 2.5` `Redis 7` |
-| **AI/ML** | `Diffusers` `Transformers` `OpenCV` |
-| **Infra** | `Kubernetes 1.29` `Docker 25` `Terraform` |
-| **Observability** | `Prometheus` `Grafana` `Structlog` |
-| **Security** | `OAuth 2.0` `Vault` `C2PA` |
-
-</div>
+```
+Backend     FastAPI 0.135  ·  Python 3.10+  ·  PyTorch 2.6
+Database    PostgreSQL 16  ·  Neo4j 5.x  ·  Milvus 2.5  ·  Redis 7
+AI / ML     Diffusers  ·  Transformers  ·  OpenCV
+Infra       Kubernetes 1.29  ·  Docker 25  ·  Terraform
+Observe     Prometheus  ·  Grafana  ·  Structlog
+Security    OAuth 2.0  ·  Vault  ·  C2PA  ·  AES-256
+```
 
 ---
 
 ## 🚀 快速開始
 
-### 前置需求
-
-`Python 3.10+` · `PostgreSQL 16` · `Neo4j 5.x` · `Milvus 2.5` · `Redis 7` · `Docker 25` · `NVIDIA GPU (RTX 3090+)`
-
-### 安裝與啟動
-
 ```bash
-# 克隆
+# 1 — 克隆
 git clone https://github.com/iiooiioo888/AI_test.git && cd AI_test
 
-# 虛擬環境
+# 2 — 環境
 python3 -m venv venv && source venv/bin/activate
-
-# 依賴
 pip install -r requirements.txt
 
-# 配置
-cp .env.example .env   # ← 編輯此文件，填入資料庫連線等
+# 3 — 配置
+cp .env.example .env        # ← 編輯填入資料庫連線
 
-# 初始化 & 啟動
+# 4 — 初始化 & 啟動
 python -m app.db.init
-python -m app.main
+python -m app.main          # → http://localhost:8888
 ```
+
+**生產環境：**
 
 ```bash
-# 生產環境 (多 worker)
 uvicorn app.main:app --host 0.0.0.0 --port 8888 --workers 4
-
-# Docker Compose
-docker compose up -d
+docker compose up -d        # 或使用 Docker Compose
 ```
+
+> **前置需求：** `Python 3.10+` · `PostgreSQL 16` · `Neo4j 5.x` · `Milvus 2.5` · `Redis 7` · `Docker 25` · `NVIDIA GPU (RTX 3090+)`
 
 ---
 
-## 📡 API 端點
+## 📡 API
 
-啟動後訪問 → [Swagger UI](http://localhost:8888/docs) · [ReDoc](http://localhost:8888/redoc) · [OpenAPI JSON](http://localhost:8888/openapi.json)
+啟動後 → [**Swagger UI**](http://localhost:8888/docs) · [ReDoc](http://localhost:8888/redoc) · [OpenAPI](http://localhost:8888/openapi.json)
 
-| 方法 | 路徑 | 說明 |
+| 方法 | 端點 | 說明 |
 |:---:|:---|:---|
 | `POST` | `/api/v1/scenes/` | 創建場景 |
 | `GET` | `/api/v1/scenes/{id}` | 獲取場景詳情 |
@@ -226,34 +213,26 @@ docker compose up -d
 ## 🚢 部署
 
 <details>
-<summary>🐳 Docker Compose (開發環境)</summary>
+<summary>🐳 Docker Compose — 開發環境</summary>
 
 ```yaml
 services:
   api:
     build: .
-    ports:
-      - "8888:8888"
+    ports: ["8888:8888"]
     environment:
-      - DATABASE_URL=postgresql://avp:password@postgres:5432/avp
-      - NEO4J_URI=bolt://neo4j:7687
-      - MILVUS_HOST=milvus
-    depends_on:
-      - postgres
-      - neo4j
-      - milvus
+      DATABASE_URL: postgresql://avp:password@postgres:5432/avp
+      NEO4J_URI: bolt://neo4j:7687
+      MILVUS_HOST: milvus
+    depends_on: [postgres, neo4j, milvus]
 
   postgres:
     image: postgres:16
-    environment:
-      POSTGRES_DB: avp
-      POSTGRES_USER: avp
-      POSTGRES_PASSWORD: password
+    environment: { POSTGRES_DB: avp, POSTGRES_USER: avp, POSTGRES_PASSWORD: password }
 
   neo4j:
     image: neo4j:5
-    environment:
-      NEO4J_AUTH: neo4j/password
+    environment: { NEO4J_AUTH: neo4j/password }
 
   milvus:
     image: milvusdb/milvus:v2.5.0
@@ -265,7 +244,7 @@ services:
 </details>
 
 <details>
-<summary>☸️ Kubernetes (生產環境)</summary>
+<summary>☸️ Kubernetes — 生產環境</summary>
 
 詳見 [`kubernetes/`](kubernetes/) 目錄。
 
@@ -273,93 +252,96 @@ services:
 
 ---
 
-## 🔐 安全合規
+## 🔐 安全
 
-**SOC2 / ISO27001**
+<div align="center">
 
-| ✅ | 控制項 |
-|:---:|:---|
-| 🔑 | 字段級加密 (AES-256) |
-| 📝 | 不可篡改審計日誌 |
-| 👥 | RBAC 權限控制 |
-| 🔍 | 操作審計追蹤 |
-| 💾 | 數據備份與災備恢復 |
-| 🏷️ | C2PA 數字水印 |
+| 🔑 加密 | 📝 審計 | 👥 RBAC | 🔍 追蹤 | 💾 備份 | 🏷️ 水印 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| AES-256 | 不可篡改 | 5 角色 | 全操作 | 災備恢復 | C2PA |
 
-**內容安全:** Azure Content Safety · 敏感詞過濾 · 圖像指紋版權保護
+</div>
+
+合規：**SOC2** · **ISO27001** · 內容安全：Azure Content Safety · 敏感詞過濾 · 圖像指紋
 
 ---
 
-## 📊 開發進度
+## 📊 路線圖
+
+<div align="center">
+
+| # | 模塊 | 狀態 | 進度 |
+|:---:|:---|:---:|:---:|
+| **M1** | 📖 敘事與劇本引擎 | ✅ 完成 | `██████████` 100% |
+| **M2** | 🧠 提示詞優化引擎 | 🚧 進行中 | `████░░░░░░` 40% |
+| **M3** | 🎥 視頻生成引擎 | 📋 規劃中 | `░░░░░░░░░░` 0% |
+| **M4** | 🔧 生產控制 MLOps | 📋 規劃中 | `░░░░░░░░░░` 0% |
+
+</div>
 
 ```mermaid
 gantt
-    title AVP 開發路線圖
-    dateFormat  YYYY-MM
-    axisFormat  %Y-%m
+    title 2025–2026 路線圖
+    dateFormat YYYY-MM
+    axisFormat %b %Y
 
     section 核心引擎
-    敘事與劇本引擎       :done,    m1, 2025-10, 2026-03
-    提示詞優化引擎       :active,  m2, 2026-03, 2026-06
-    視頻生成引擎         :         m3, 2026-06, 2026-09
-    生產控制 MLOps       :         m4, 2026-09, 2026-12
+    M1 敘事引擎          :done,    m1, 2025-10, 5m
+    M2 提示詞優化        :active,  m2, 2026-03, 3m
+    M3 視頻生成          :         m3, 2026-06, 3m
+    M4 生產控制          :         m4, 2026-09, 3m
 
     section 基礎設施
-    CI/CD Pipeline      :done,    ci, 2025-10, 2026-01
-    K8s GPU 調度         :active,  k8s, 2026-02, 2026-05
-    監控 & 可觀測        :         mon, 2026-05, 2026-07
+    CI/CD Pipeline      :done,    ci, 2025-10, 3m
+    K8s GPU 調度         :active,  k8s, 2026-02, 3m
+    監控 & 可觀測        :         mon, 2026-05, 2m
 ```
-
-| 模塊 | 狀態 | 進度 |
-|:---|:---:|:---:|
-| 1. 敘事與劇本引擎 | ✅ 完成 | ██████████ 100% |
-| 2. 提示詞優化引擎 | 🔜 規劃中 | ░░░░░░░░░░ 0% |
-| 3. 視頻生成引擎 | 🔜 規劃中 | ░░░░░░░░░░ 0% |
-| 4. 生產控制 MLOps | 🔜 規劃中 | ░░░░░░░░░░ 0% |
 
 ---
 
-## 📋 任務待開發
+## 📋 下一 Sprint
 
 ### 構建企業級 AI 敘事與劇本管理核心
 
-> **Role:** 高級後端架構師 · **Context:** 項目 Nexus
+> 高級後端架構師 · 項目 Nexus
 
 <details>
-<summary><strong>1. 數據模型 (Data Model)</strong></summary>
+<summary><b>1. 數據模型</b></summary>
 
-- **PostgreSQL** — `scenes` 表，JSONB `content` / `metadata` / `status`，含 `version` (SemVer) + `audit_log`
-- **Neo4j** — 節點 `Scene` · `Character` · `Prop`，關係 `LEADS_TO` / `CONTAINS` / `REQUIRES`，唯一約束 + 索引
-- **Milvus** — 768 維場景語義向量，相似度檢索 + 衝突檢測
+| Store | Schema |
+|:---|:---|
+| **PostgreSQL** | `scenes` — JSONB `content` · `metadata` · `status` · `version` (SemVer) · `audit_log` |
+| **Neo4j** | Nodes: `Scene` · `Character` · `Prop` / Relations: `LEADS_TO` · `CONTAINS` · `REQUIRES` / 唯一約束 + 索引 |
+| **Milvus** | 768 維場景語義向量 — 相似度檢索 + 衝突檢測 |
 
 </details>
 
 <details>
-<summary><strong>2. 核心邏輯 (Core Logic)</strong></summary>
+<summary><b>2. 核心邏輯</b></summary>
 
-- **`SceneStateMachine`** — `DRAFT → REVIEW → LOCKED → COMPLETED`，非法轉移拋 `StateTransitionError`
-- **`RippleEffectAnalyzer`** — 遍歷 `LEADS_TO` 關係，檢查角色/道具邏輯衝突，返回報告
-- **CRDT 協作** — Yjs 多人實時編輯，字段級鎖 (Field-Level Lock)
-
-</details>
-
-<details>
-<summary><strong>3. API 規範 (API Contract)</strong></summary>
-
-| 方法 | 路徑 | 說明 |
-|:---:|:---|:---|
-| `PATCH` | `/scenes/{id}` | 部分更新 + 漣漪分析 → `200` / `409` |
-| `GET` | `/scripts/{id}/graph` | 劇情依賴圖譜 JSON |
-| `POST` | `/scenes/{id}/branch` | 劇情分支，複製節點 + 新版本 ID |
+- **`SceneStateMachine`** — `DRAFT → REVIEW → LOCKED → COMPLETED` · 非法轉移拋 `StateTransitionError`
+- **`RippleEffectAnalyzer`** — 遍歷 `LEADS_TO` · 檢查角色/道具邏輯衝突 · 返回報告
+- **CRDT 協作** — Yjs 多人實時編輯 · 字段級鎖 (Field-Level Lock)
 
 </details>
 
 <details>
-<summary><strong>4. CI/CD 與交付</strong></summary>
+<summary><b>3. API 規範</b></summary>
 
-- **CI/CD** — GitHub Actions：lint → type-check → build → deploy
-- **交付物** — Alembic 遷移腳本 · Neo4j 初始化 Cypher · FastAPI 服務代碼 · OpenAPI 文檔
-- **代碼規範** — Type Hints · 錯誤處理 · 結構化日誌
+| 方法 | 端點 | → | 說明 |
+|:---:|:---|:---:|:---|
+| `PATCH` | `/scenes/{id}` | `200` / `409` | 部分更新 + 漣漪分析 |
+| `GET` | `/scripts/{id}/graph` | `200` | 劇情依賴圖譜 JSON |
+| `POST` | `/scenes/{id}/branch` | `201` | 劇情分支 + 新版本 ID |
+
+</details>
+
+<details>
+<summary><b>4. CI/CD 與交付</b></summary>
+
+- **Pipeline** — GitHub Actions：lint → type-check → build → deploy
+- **交付物** — Alembic 遷移 · Neo4j Cypher · FastAPI 服務 · OpenAPI 文檔
+- **規範** — Type Hints · 錯誤處理 · 結構化日誌
 
 </details>
 
@@ -367,24 +349,31 @@ gantt
 
 ## 🤝 貢獻
 
-1. Fork 本倉庫
-2. 創建特性分支 (`git checkout -b feat/amazing-feature`)
-3. 提交變更 (`git commit -m 'feat: add amazing feature'`)
-4. 推送分支 (`git push origin feat/amazing-feature`)
-5. 開啟 Pull Request
+```
+Fork → Branch → Commit → Push → PR
+```
 
-請確保所有 PR 通過 CI/CD pipeline 並附帶對應文檔更新。
+```bash
+git checkout -b feat/your-feature
+git commit -m "feat: your feature"
+git push origin feat/your-feature
+# → 開啟 Pull Request
+```
+
+請確保 PR 通過 CI pipeline 並附帶文檔更新。
 
 ---
 
 ## 📄 授權
 
-本專案以 [MIT](LICENSE) 授權條款釋出。
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
 
-[GitHub](https://github.com/iiooiioo888/AI_test) · [文檔](https://docs.openclaw.ai)
+**[GitHub](https://github.com/iiooiioo888/AI_test)** · **[文檔](https://docs.openclaw.ai)**
+
+<sub>Built with ⚡ by the AVP team</sub>
 
 </div>
