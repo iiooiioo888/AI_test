@@ -17,7 +17,7 @@
 
 &nbsp;
 
-[**快速開始**](#-快速開始) · [**架構**](#️-架構) · [**API**](#-api) · [**路線圖**](#-路線圖) · [**貢獻**](#-貢獻)
+[**快速開始**](#-快速開始) · [**架構**](#️-架構) · [**API**](#-api) · [**任務待開發**](#-任務待開發) · [**路線圖**](#-路線圖) · [**貢獻**](#-貢獻)
 
 </div>
 
@@ -138,12 +138,13 @@ graph LR
 
 ```mermaid
 graph TD
-    A["SceneObject<br/><i>JSONB content · metadata · status</i>"] --> B["StateMachine<br/><i>7 態轉換</i>"]
+    A["SceneObject<br/><i>JSONB content · metadata · status</i>"] --> B["StateMachine<br/><i>7 態轉換 + Guard 系統</i>"]
     A --> C["KnowledgeGraph<br/><i>Neo4j LEADS_TO · CONTAINS · REQUIRES</i>"]
     A --> D["CRDT Engine<br/><i>Yjs 字段級同步</i>"]
     C --> E["RippleEffectAnalyzer<br/><i>BFS 遍歷衝突檢測</i>"]
-    B --> F["StateTransitionError<br/><i>非法轉移攔截</i>"]
-    E --> G["衝突報告<br/><i>409 Conflict</i>"]
+    B --> F["StateTransitionError<br/><i>非法轉移攔截 + 診斷上下文</i>"]
+    E --> G["衝突報告<br/><i>角色 · 道具 · 時間線 · 情緒弧線</i>"]
+    A --> H["Branching<br/><i>Git-like 版本分支</i>"]
 ```
 
 </details>
@@ -198,14 +199,41 @@ docker compose up -d
 
 啟動後 → [**Swagger UI**](http://localhost:8888/docs) · [ReDoc](http://localhost:8888/redoc) · [OpenAPI](http://localhost:8888/openapi.json)
 
+### 敘事引擎 (Narrative Engine)
+
+| 方法 | 端點 | 狀態碼 | 說明 |
+|:---:|:---|:---:|:---|
+| `POST` | `/api/v1/narrative/scenes` | `201` | 創建場景 |
+| `GET` | `/api/v1/narrative/scenes/{id}` | `200` | 獲取場景詳情 |
+| `GET` | `/api/v1/narrative/scenes` | `200` | 列出場景 (支持 state / branch 過濾) |
+| `PATCH` | `/api/v1/narrative/scenes/{id}` | `200` / `409` | 部分更新 + 漣漪分析 (衝突時返回 409) |
+| `POST` | `/api/v1/narrative/scenes/{id}/transition` | `200` / `422` | 狀態轉換 (非法轉移返回 422) |
+| `GET` | `/api/v1/narrative/scenes/{id}/valid-transitions` | `200` | 查詢可用的下一步狀態 |
+| `GET` | `/api/v1/narrative/scenes/{id}/impact-analysis` | `200` | 漣漪效應完整分析報告 |
+| `GET` | `/api/v1/narrative/scenes/{id}/graph` | `200` | 場景中心的依賴圖譜 |
+| `POST` | `/api/v1/narrative/scenes/{id}/branch` | `201` | 創建劇情分支 → 新版本 ID |
+| `GET` | `/api/v1/narrative/scripts/{id}/graph` | `200` | 完整劇情依賴圖譜 (JSON) |
+| `GET` | `/api/v1/narrative/consistency/global` | `200` | 全局一致性檢查 |
+| `GET` | `/api/v1/narrative/stats` | `200` | 引擎統計資訊 |
+
+### 視頻處理
+
 | 方法 | 端點 | 說明 |
 |:---:|:---|:---|
-| `POST` | `/api/v1/scenes/` | 創建場景 |
-| `GET` | `/api/v1/scenes/{id}` | 獲取場景詳情 |
-| `POST` | `/api/v1/scenes/{id}/transition` | 狀態轉換 |
-| `GET` | `/api/v1/scenes/{id}/impact-analysis` | 漣漪效應分析 |
+| `POST` | `/api/upload` | 上傳視頻 |
+| `POST` | `/api/process/effect` | 應用 AI 特效 |
+| `POST` | `/api/process/extend` | 視頻擴展處理 |
+| `GET` | `/api/download/{task_id}` | 下載處理結果 |
+| `GET` | `/api/effects` | 特效列表 |
+
+### 其他
+
+| 方法 | 端點 | 說明 |
+|:---:|:---|:---|
+| `POST` | `/api/v1/scenes/` | 創建場景 (舊版) |
 | `POST` | `/api/v1/prompts/optimize` | 優化提示詞 |
 | `POST` | `/api/v1/generation/submit` | 提交生成任務 |
+| `GET` | `/health` | 健康檢查 |
 
 ---
 
@@ -267,50 +295,53 @@ services:
 
 ---
 
-## 📋 任務待開發 — 企業級 AI 敘事與劇本管理核心
+## 📋 任務待開發
 
 > **Role:** 高級後端架構師 (敘事系統專項) · **Context:** 項目 Nexus — 企業級 AI 視頻生產平台
 
 ### 1. 數據模型 (Data Model)
 
-| 數據存儲 | Schema 定義 |
-|:---|:---|
-| **PostgreSQL** (關係型) | `scenes` 表 — JSONB `content` (對白/動作) · `metadata` (時長/地點) · `status` (狀態機) · `version` (SemVer) · `audit_log` (操作審計) |
-| **Neo4j** (圖數據庫) | 節點: `Scene` · `Character` · `Prop` · 關係: `LEADS_TO` (劇情順序) · `CONTAINS` (包含角色) · `REQUIRES` (道具依賴) · 唯一約束 + 索引 |
-| **Milvus** (向量庫) | 768 維場景語義向量 — 用於相似度檢索與衝突檢測 |
+| 數據存儲 | Schema 定義 | 狀態 |
+|:---|:---|:---:|
+| **PostgreSQL** | `scenes` — JSONB `content` · `metadata` · `status` · `version` (SemVer) · `audit_log` | ✅ 已完成 |
+| **Neo4j** | 節點: `Scene` · `Character` · `Prop` / 關係: `LEADS_TO` · `CONTAINS` · `REQUIRES` | ✅ 已完成 |
+| **Milvus** | 768 維場景語義向量 — 相似度檢索 + 衝突檢測 | ✅ 已完成 |
 
 ### 2. 核心邏輯 (Core Logic)
 
-| 模塊 | 類名 | 功能 |
-|:---|:---|:---|
-| 🔄 **狀態機** | `SceneStateMachine` | 嚴格控制 `DRAFT → REVIEW → LOCKED → COMPLETED` 轉移，非法轉移拋出 `StateTransitionError` |
-| 🌊 **漣漪效應** | `RippleEffectAnalyzer` | 場景修改時遍歷 Neo4j `LEADS_TO` 關係，檢查後續場景的角色狀態 (如：死亡後不能出現) 與道具邏輯，返回衝突報告 |
-| 🤝 **協作同步** | Yjs CRDT Engine | 集成 Yjs (CRDT 算法)，支持多人實時編輯同一劇本字段，實現字段級鎖 (Field-Level Lock) |
+| 模塊 | 類名 | 功能 | 狀態 |
+|:---|:---|:---|:---:|
+| 🔄 狀態機 | `StateMachineService` | `DRAFT → REVIEW → LOCKED → COMPLETED` · `StateTransitionError` + Guard 系統 + 批量驗證 + 最短路徑查詢 | ✅ |
+| 🌊 漣漪效應 | `RippleEffectAnalyzer` | BFS 遍歷 `LEADS_TO` · 角色死亡/道具銷毀/時間線/情緒弧線衝突檢測 | ✅ |
+| 🤝 協作同步 | `CRDTEngine` | Yjs CRDT · 字段級鎖 · Undo/Redo · 快照 | ✅ |
 
-### 3. API 規範 (API Contract)
+### 3. API 端點
 
-| 方法 | 端點 | 狀態碼 | 說明 |
-|:---:|:---|:---:|:---|
-| `PATCH` | `/scenes/{id}` | `200` / `409` | 部分更新場景，自動觸發漣漪分析 |
-| `GET` | `/scripts/{id}/graph` | `200` | 返回劇情依賴圖譜 (JSON 格式) |
-| `POST` | `/scenes/{id}/branch` | `201` | 創建劇情分支，複製後續節點並生成新版本 ID |
+| 方法 | 端點 | 狀態碼 | 狀態 |
+|:---:|:---|:---:|:---:|
+| `PATCH` | `/scenes/{id}` | `200` / `409` | ✅ |
+| `GET` | `/scripts/{id}/graph` | `200` | ✅ |
+| `POST` | `/scenes/{id}/branch` | `201` | ✅ |
 
-### 4. 測試與交付 (Testing & Deliverables)
+### 4. 交付物
 
-- **測試**: 單元測試覆蓋率 > 90%，包含狀態機邊界測試與圖譜衝突模擬
-- **交付物**:
-  - Alembic 遷移腳本 (PostgreSQL)
-  - Neo4j 初始化 Cypher 腳本
-  - Python 服務代碼 (FastAPI)
-  - OpenAPI 文檔自動生成
-- **代碼規範**: Type Hints (類型註解) · 錯誤處理邏輯 · 結構化日誌 (structlog)
+| 交付物 | 狀態 |
+|:---|:---:|
+| Alembic 遷移腳本 (PostgreSQL) | ✅ `app/db/migrations/001_create_scenes.py` |
+| Neo4j 初始化 Cypher | ✅ `app/db/neo4j_init.cypher` |
+| Milvus 向量庫 Schema | ✅ `app/db/milvus_schema.py` |
+| FastAPI 服務代碼 | ✅ `app/narrative_engine/` |
+| OpenAPI 文檔 | ✅ 自動生成 (`/docs`) |
+| Type Hints · 錯誤處理 · 結構化日誌 | ✅ |
 
 ### 開發優先級
 
 ```
-Phase 1: 更新前端 UI 代碼 (templates + static)
-Phase 2: 優化核心代碼 — 敘事引擎 / 狀態機 / 漣漪分析
-Phase 3: 數據庫遷移腳本與 API 端點完善
+Phase 1 ✅ 更新前端 UI 代碼 (三欄式敘事管理 + 圖譜視圖)
+Phase 2 ✅ 優化核心代碼 (狀態機 + 漣漪分析 + API 端點)
+Phase 3 ✅ 數據庫遷移腳本與初始化
+Phase 4   前端 → 後端 API 聯調 (fetch → 真實數據)
+Phase 5   單元測試覆蓋 > 90%
 ```
 
 ---
@@ -348,51 +379,52 @@ gantt
 
 ---
 
-## 📋 下一 Sprint
+## 📁 專案結構
 
-### 構建企業級 AI 敘事與劇本管理核心
-
-> 高級後端架構師 · 項目 Nexus
-
-<details>
-<summary><b>1. 數據模型</b></summary>
-
-| Store | Schema |
-|:---|:---|
-| **PostgreSQL** | `scenes` — JSONB `content` · `metadata` · `status` · `version` (SemVer) · `audit_log` |
-| **Neo4j** | Nodes: `Scene` · `Character` · `Prop` / Relations: `LEADS_TO` · `CONTAINS` · `REQUIRES` / 唯一約束 + 索引 |
-| **Milvus** | 768 維場景語義向量 — 相似度檢索 + 衝突檢測 |
-
-</details>
-
-<details>
-<summary><b>2. 核心邏輯</b></summary>
-
-- **`SceneStateMachine`** — `DRAFT → REVIEW → LOCKED → COMPLETED` · 非法轉移拋 `StateTransitionError`
-- **`RippleEffectAnalyzer`** — 遍歷 `LEADS_TO` · 檢查角色/道具邏輯衝突 · 返回報告
-- **CRDT 協作** — Yjs 多人實時編輯 · 字段級鎖 (Field-Level Lock)
-
-</details>
-
-<details>
-<summary><b>3. API 規範</b></summary>
-
-| 方法 | 端點 | → | 說明 |
-|:---:|:---|:---:|:---|
-| `PATCH` | `/scenes/{id}` | `200` / `409` | 部分更新 + 漣漪分析 |
-| `GET` | `/scripts/{id}/graph` | `200` | 劇情依賴圖譜 JSON |
-| `POST` | `/scenes/{id}/branch` | `201` | 劇情分支 + 新版本 ID |
-
-</details>
-
-<details>
-<summary><b>4. CI/CD 與交付</b></summary>
-
-- **Pipeline** — GitHub Actions：lint → type-check → build → deploy
-- **交付物** — Alembic 遷移 · Neo4j Cypher · FastAPI 服務 · OpenAPI 文檔
-- **規範** — Type Hints · 錯誤處理 · 結構化日誌
-
-</details>
+```
+AI_test/
+├── app/
+│   ├── api/v1/
+│   │   ├── endpoints/          # REST 端點 (auth, scenes, characters...)
+│   │   └── router.py           # 路由匯總
+│   ├── core/
+│   │   └── config.py           # 應用配置
+│   ├── db/
+│   │   ├── migrations/         # Alembic 遷移腳本
+│   │   │   └── 001_create_scenes.py
+│   │   ├── milvus_schema.py    # Milvus 向量庫 Schema
+│   │   ├── neo4j_init.cypher   # Neo4j 初始化 (約束/索引/範例數據)
+│   │   └── schema.sql          # PostgreSQL Schema
+│   ├── narrative_engine/
+│   │   ├── api/
+│   │   │   └── routes.py       # 敘事 API (PATCH/GRAPH/BRANCH)
+│   │   ├── crdt/
+│   │   │   └── crdt_engine.py  # Yjs CRDT 協作引擎
+│   │   ├── graph/
+│   │   │   └── knowledge_graph.py  # Neo4j 知識圖譜服務
+│   │   ├── models/
+│   │   │   ├── scene.py        # SceneObject 數據模型
+│   │   │   └── character.py    # Character / Prop 模型
+│   │   └── services/
+│   │       ├── state_machine.py      # 狀態機 (Guard + TransitionError)
+│   │       ├── ripple_analyzer.py    # 漣漪效應分析器
+│   │       └── narrative_service.py  # 敘事引擎編排器
+│   ├── schemas/                # Pydantic Schema
+│   ├── shared/
+│   │   └── __init__.py         # 共享枚舉 (SceneState, Role, AuditEntry)
+│   └── main.py                 # FastAPI 入口
+├── static/
+│   ├── css/style.css           # 前端樣式 (深色主題)
+│   └── js/app.js               # 前端邏輯 (視頻 + 敘事 + 圖譜)
+├── templates/
+│   └── index.html              # 主頁面 (三欄式敘事管理)
+├── tests/
+│   └── narrative_engine/       # 測試 (待補充)
+├── docker-compose.yml
+├── Dockerfile
+├── main.py                     # 入口 (視頻處理模式)
+└── requirements.txt
+```
 
 ---
 
