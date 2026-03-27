@@ -58,6 +58,12 @@ EFFECTS = {
     "matrix":    {"name": "黑客帝国",       "icon": "💊", "desc": "绿色矩阵数字雨"},
     "comic":     {"name": "漫画风",         "icon": "💥", "desc": "波普漫画网点效果"},
     "wave":      {"name": "波浪扭曲",       "icon": "🌊", "desc": "正弦波形变动画"},
+    "oil":       {"name": "油画风",         "icon": "🎨", "desc": "笔触纹理油画效果"},
+    "watercolor":{"name": "水彩风",         "icon": "🖌️", "desc": "水彩晕染扩散效果"},
+    "vintage":   {"name": "老电影",         "icon": "📽️", "desc": "褪色胶片 + 划痕 + 颤动"},
+    "duotone":   {"name": "双色调",         "icon": "🎭", "desc": "两色渐变映射效果"},
+    "chromatic": {"name": "色散效果",       "icon": "🌈", "desc": "RGB色差分离效果"},
+    "cartoon":   {"name": "卡通化",         "icon": "🎪", "desc": "边缘强化 + 量化色彩"},
 }
 
 EXTEND_MODES = {
@@ -106,6 +112,19 @@ def get_video_info(path: str) -> dict:
         "codec": video_stream.get("codec_name", "unknown"),
         "size": int(fmt.get("size", 0)),
     }
+
+
+def _has_audio_stream(path: str) -> bool:
+    """Check if a video file has an audio stream."""
+    try:
+        cmd = [
+            "ffprobe", "-v", "quiet", "-select_streams", "a",
+            "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        return "audio" in result.stdout
+    except Exception:
+        return False
 
 
 def _run_ffmpeg(cmd: list, timeout: int = FFMPEG_TIMEOUT) -> subprocess.CompletedProcess:
@@ -324,6 +343,98 @@ def apply_comic(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
     return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 
+def apply_oil(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
+    """Oil painting effect using stylization."""
+    sigma_s = int(60 * intensity)
+    sigma_r = 0.4 + 0.2 * intensity
+    try:
+        return cv2.stylization(frame, sigma_s=sigma_s, sigma_r=sigma_r)
+    except Exception:
+        # Fallback: bilateral filter approximation
+        d = max(5, int(9 * intensity))
+        return cv2.bilateralFilter(frame, d, 75 * intensity, 75 * intensity)
+
+
+def apply_watercolor(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
+    """Watercolor effect using edge-preserving filter + saturation boost."""
+    sigma_s = int(60 * intensity)
+    sigma_r = 0.45 + 0.15 * intensity
+    try:
+        result = cv2.edgePreservingFilter(frame, flags=cv2.RECURS_FILTER, sigma_s=sigma_s, sigma_r=sigma_r)
+    except Exception:
+        result = cv2.bilateralFilter(frame, 9, 75, 75)
+    # Boost saturation for watercolor feel
+    hsv = cv2.cvtColor(result, cv2.COLOR_BGR2HSV).astype(np.float32)
+    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * (1.3 + intensity * 0.5), 0, 255)
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
+
+def apply_vintage(frame: np.ndarray, intensity: float = 0.5, t: float = 0) -> np.ndarray:
+    """Vintage film effect: desaturation, sepia tint, scratches, flicker."""
+    h, w = frame.shape[:2]
+    # Desaturate
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR).astype(np.float32)
+    # Sepia tint
+    result[:, :, 0] = np.clip(result[:, :, 0] * 0.7 + 30, 0, 255)   # B
+    result[:, :, 1] = np.clip(result[:, :, 1] * 0.85 + 20, 0, 255)  # G
+    result[:, :, 2] = np.clip(result[:, :, 2] * 1.1 + 10, 0, 255)   # R
+    # Brightness flicker
+    flicker = 1.0 + 0.1 * intensity * np.sin(t * 12)
+    result = np.clip(result * flicker, 0, 255).astype(np.uint8)
+    # Film grain
+    grain = np.random.randint(0, max(1, int(40 * intensity)), (h, w, 1), dtype=np.uint8)
+    result = cv2.add(result, np.repeat(grain, 3, axis=2))
+    # Random vertical scratches
+    for _ in range(max(1, int(3 * intensity))):
+        x = np.random.randint(0, w)
+        scratch_len = np.random.randint(h // 4, h)
+        y_start = np.random.randint(0, h - scratch_len)
+        result[y_start:y_start + scratch_len, x] = 200
+    return result
+
+
+def apply_duotone(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
+    """Duotone: map luminance to two-color gradient (blue → orange)."""
+    h, w = frame.shape[:2]
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+    # Dark color (BGR): deep blue/purple
+    dark = np.array([80, 20, 120], dtype=np.float32)
+    # Light color (BGR): warm orange/gold
+    light = np.array([50, 180, 240], dtype=np.float32)
+    # Blend based on luminance
+    result = (dark[np.newaxis, np.newaxis, :] * (1 - gray[:, :, np.newaxis]) +
+              light[np.newaxis, np.newaxis, :] * gray[:, :, np.newaxis])
+    return np.clip(result, 0, 255).astype(np.uint8)
+
+
+def apply_chromatic(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
+    """Chromatic aberration: shift R and B channels apart from G."""
+    h, w = frame.shape[:2]
+    shift = max(1, int(w * 0.01 * intensity))
+    result = frame.copy()
+    # Shift red channel right
+    result[:, shift:, 2] = frame[:, :-shift, 2]
+    # Shift blue channel left
+    result[:, :-shift, 0] = frame[:, shift:, 0]
+    # Add slight glow
+    glow = cv2.GaussianBlur(result, (0, 0), sigmaX=3 * intensity)
+    return cv2.addWeighted(result, 0.85, glow, 0.15, 0)
+
+
+def apply_cartoon(frame: np.ndarray, intensity: float = 0.5) -> np.ndarray:
+    """Cartoon effect: edge overlay + color quantization."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.medianBlur(gray, 7)
+    edges = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                   cv2.THRESH_BINARY, 9, 2 * intensity)
+    # Color quantization
+    div = max(2, int(64 / (1 + intensity)))
+    quantized = (frame // div) * div + div // 2
+    edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    return cv2.bitwise_and(quantized, edges_bgr)
+
+
 def apply_wave(frame: np.ndarray, intensity: float = 0.5, t: float = 0) -> np.ndarray:
     h = frame.shape[0]
     result = np.zeros_like(frame)
@@ -348,6 +459,12 @@ EFFECT_FN = {
     "matrix": lambda f, i, t: apply_matrix(f, i),
     "comic": lambda f, i, t: apply_comic(f, i),
     "wave": lambda f, i, t: apply_wave(f, i, t),
+    "oil": lambda f, i, t: apply_oil(f, i),
+    "watercolor": lambda f, i, t: apply_watercolor(f, i),
+    "vintage": lambda f, i, t: apply_vintage(f, i, t),
+    "duotone": lambda f, i, t: apply_duotone(f, i),
+    "chromatic": lambda f, i, t: apply_chromatic(f, i),
+    "cartoon": lambda f, i, t: apply_cartoon(f, i),
 }
 
 
@@ -356,7 +473,7 @@ EFFECT_FN = {
 # ═══════════════════════════════════════════════════════════════
 
 def _process_effect_sync(task_id: str, input_path: str, effect: str, intensity: float):
-    """CPU-bound effect processing — runs in executor."""
+    """CPU-bound effect processing — runs in executor. Preserves audio."""
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
         return None, "无法打开视频文件"
@@ -366,7 +483,13 @@ def _process_effect_sync(task_id: str, input_path: str, effect: str, intensity: 
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
+    video_only_path = str(OUTPUT_DIR / f"{task_id}_vid.mp4")
     output_path = str(OUTPUT_DIR / f"{task_id}.mp4")
+
+    # Check if source has audio
+    has_audio = _has_audio_stream(input_path)
+
+    # Pipe processed frames into FFmpeg (video only first)
     cmd = [
         "ffmpeg", "-y",
         "-f", "rawvideo", "-pix_fmt", "bgr24",
@@ -374,12 +497,13 @@ def _process_effect_sync(task_id: str, input_path: str, effect: str, intensity: 
         "-i", "-",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-pix_fmt", "yuv420p",
-        output_path
+        video_only_path
     ]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
     fn = EFFECT_FN.get(effect, apply_glitch)
     frame_idx = 0
+    last_progress = -1
 
     try:
         while True:
@@ -390,6 +514,12 @@ def _process_effect_sync(task_id: str, input_path: str, effect: str, intensity: 
             processed = fn(frame, intensity, t)
             proc.stdin.write(processed.tobytes())
             frame_idx += 1
+            # Update progress periodically (every ~5%)
+            if total > 0:
+                pct = int(frame_idx / total * 90)
+                if pct != last_progress:
+                    tasks[task_id]["progress"] = pct
+                    last_progress = pct
     except Exception as e:
         cap.release()
         proc.stdin.close()
@@ -399,6 +529,39 @@ def _process_effect_sync(task_id: str, input_path: str, effect: str, intensity: 
     cap.release()
     proc.stdin.close()
     proc.wait()
+
+    # Merge audio back if source has it
+    if has_audio:
+        merge_cmd = [
+            "ffmpeg", "-y",
+            "-i", video_only_path,
+            "-i", input_path,
+            "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+            "-map", "0:v:0", "-map", "1:a:0?",
+            "-shortest",
+            output_path
+        ]
+        result = _run_ffmpeg(merge_cmd, timeout=FFMPEG_TIMEOUT)
+        if result.returncode == 0:
+            # Clean up video-only file
+            try:
+                os.remove(video_only_path)
+            except OSError:
+                pass
+            return output_path, None
+        # If merge fails, fall back to video-only
+        logger.warning(f"Audio merge failed, falling back to video-only: {result.stderr[-200:]}")
+
+    # No audio or merge failed — rename video-only to output
+    try:
+        os.rename(video_only_path, output_path)
+    except OSError:
+        shutil.copy2(video_only_path, output_path)
+        try:
+            os.remove(video_only_path)
+        except OSError:
+            pass
+
     return output_path, None
 
 
@@ -492,47 +655,104 @@ async def process_extend(task_id: str, input_path: str, mode: str, extra_param: 
 
 def _extend_loop_smooth(inp, out, info) -> tuple[bool, str]:
     fade_dur = min(1.0, info["duration"] / 4)
-    cmd = [
-        "ffmpeg", "-y", "-i", inp,
-        "-filter_complex",
-        f"[0]split[orig][copy];"
-        f"[copy]trim=start=0:end={fade_dur},setpts=PTS-STARTPTS[fadeclip];"
-        f"[orig][fadeclip]xfade=transition=fade:duration={fade_dur}:offset={info['duration']-fade_dur}",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
+    has_audio = _has_audio_stream(inp)
+    if has_audio:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0:v]split[orig][copy];"
+            f"[copy]trim=start=0:end={fade_dur},setpts=PTS-STARTPTS[fadeclip];"
+            f"[orig][fadeclip]xfade=transition=fade:duration={fade_dur}:offset={info['duration']-fade_dur}[vout];"
+            f"[0:a]afade=t=out:st={info['duration']-fade_dur}:d={fade_dur},"
+            f"[0:a]atrim=0:{fade_dur},asetpts=PTS-STARTPTS,afade=t=in:d={fade_dur}[aclipped];"
+            f"[0:a]atrim=0:{info['duration']-fade_dur},asetpts=PTS-STARTPTS[aorig];"
+            f"[aorig][aclipped]concat=n=2:v=0:a=1[aout]",
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0]split[orig][copy];"
+            f"[copy]trim=start=0:end={fade_dur},setpts=PTS-STARTPTS[fadeclip];"
+            f"[orig][fadeclip]xfade=transition=fade:duration={fade_dur}:offset={info['duration']-fade_dur}",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", out
+        ]
     return _run_ffmpeg_sync(cmd)
 
 
 def _extend_ping_pong(inp, out) -> tuple[bool, str]:
-    cmd = [
-        "ffmpeg", "-y", "-i", inp,
-        "-filter_complex",
-        "[0]split[fwd][tmp];[tmp]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
+    has_audio = _has_audio_stream(inp)
+    if has_audio:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            "[0:v]split[fwd][tmp];[tmp]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0[vout];"
+            "[0:a]areverse[arev];[0:a][arev]concat=n=2:v=0:a=1[aout]",
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            "[0]split[fwd][tmp];[tmp]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", out
+        ]
     return _run_ffmpeg_sync(cmd)
 
 
 def _extend_slow_motion(inp, out, info, factor=2.0) -> tuple[bool, str]:
     factor = max(2, min(8, int(factor)))
+    has_audio = _has_audio_stream(inp)
     new_fps = info["fps"] * factor
-    cmd = [
-        "ffmpeg", "-y", "-i", inp,
-        "-filter_complex", f"minterpolate=fps={new_fps}:mi_mode=blend",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
-    ok, err = _run_ffmpeg_sync(cmd)
-    if not ok:
-        # Fallback
+    # Slow down audio too
+    atempo = 1.0 / factor
+    if has_audio:
         cmd = [
             "ffmpeg", "-y", "-i", inp,
-            "-filter_complex", f"setpts={factor}*PTS",
+            "-filter_complex",
+            f"[0:v]minterpolate=fps={new_fps}:mi_mode=blend[vout];"
+            f"[0:a]atempo={atempo}[aout]",
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex", f"minterpolate=fps={new_fps}:mi_mode=blend",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-pix_fmt", "yuv420p", out
         ]
+    ok, err = _run_ffmpeg_sync(cmd)
+    if not ok:
+        # Fallback without minterpolate
+        if has_audio:
+            cmd = [
+                "ffmpeg", "-y", "-i", inp,
+                "-filter_complex",
+                f"[0:v]setpts={factor}*PTS[vout];[0:a]atempo={atempo}[aout]",
+                "-map", "[vout]", "-map", "[aout]",
+                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                "-c:a", "aac", "-b:a", "128k",
+                "-pix_fmt", "yuv420p", out
+            ]
+        else:
+            cmd = [
+                "ffmpeg", "-y", "-i", inp,
+                "-filter_complex", f"setpts={factor}*PTS",
+                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                "-pix_fmt", "yuv420p", out
+            ]
         return _run_ffmpeg_sync(cmd)
     return ok, err
 
@@ -550,49 +770,103 @@ def _extend_reverse(inp, out) -> tuple[bool, str]:
 def _extend_speed_ramp(inp, out, info) -> tuple[bool, str]:
     dur = info["duration"]
     third = dur / 3
-    cmd = [
-        "ffmpeg", "-y", "-i", inp,
-        "-filter_complex",
-        f"[0]split=3[p1][p2][p3];"
-        f"[p1]trim=0:{third},setpts=1.5*(PTS-STARTPTS)[s1];"
-        f"[p2]trim={third}:{2*third},setpts=0.5*(PTS-STARTPTS)[s2];"
-        f"[p3]trim={2*third}:,setpts=1.5*(PTS-STARTPTS)[s3];"
-        f"[s1][s2][s3]concat=n=3:v=1:a=0",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
+    has_audio = _has_audio_stream(inp)
+    if has_audio:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0:v]split=3[p1][p2][p3];"
+            f"[p1]trim=0:{third},setpts=1.5*(PTS-STARTPTS)[s1];"
+            f"[p2]trim={third}:{2*third},setpts=0.5*(PTS-STARTPTS)[s2];"
+            f"[p3]trim={2*third}:,setpts=1.5*(PTS-STARTPTS)[s3];"
+            f"[s1][s2][s3]concat=n=3:v=1:a=0[vout];"
+            f"[0:a]atempo=0.667[s1a];"
+            f"[0:a]atempo=2.0[s2a];"
+            f"[0:a]atempo=0.667[s3a];"
+            f"[s1a][s2a][s3a]concat=n=3:v=0:a=1[aout]",
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0]split=3[p1][p2][p3];"
+            f"[p1]trim=0:{third},setpts=1.5*(PTS-STARTPTS)[s1];"
+            f"[p2]trim={third}:{2*third},setpts=0.5*(PTS-STARTPTS)[s2];"
+            f"[p3]trim={2*third}:,setpts=1.5*(PTS-STARTPTS)[s3];"
+            f"[s1][s2][s3]concat=n=3:v=1:a=0",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", out
+        ]
     return _run_ffmpeg_sync(cmd)
 
 
 def _extend_freeze(inp, out, info, freeze_sec=3.0) -> tuple[bool, str]:
     freeze_sec = max(1, min(10, int(freeze_sec)))
     last_t = max(0, info["duration"] - 0.04)
-    cmd = [
-        "ffmpeg", "-y", "-i", inp,
-        "-filter_complex",
-        f"[0]split[vid][still];"
-        f"[still]trim=start={last_t},setpts=PTS-STARTPTS,loop=loop=-1:size=2:start=0[frz];"
-        f"[frz]fade=t=out:st={freeze_sec-1}:d=1[frzf];"
-        f"[vid][frzf]concat=n=2:v=1:a=0",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
+    has_audio = _has_audio_stream(inp)
+    if has_audio:
+        # For audio: play original audio, then hold last audio sample with fade out
+        dur = info["duration"]
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0:v]split[vid][still];"
+            f"[still]trim=start={last_t},setpts=PTS-STARTPTS,loop=loop=-1:size=2:start=0[frz];"
+            f"[frz]fade=t=out:st={freeze_sec-1}:d=1[frzf];"
+            f"[vid][frzf]concat=n=2:v=1:a=0[vout];"
+            f"[0:a]afade=t=out:st={dur-0.5}:d=0.5[aout]",
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y", "-i", inp,
+            "-filter_complex",
+            f"[0]split[vid][still];"
+            f"[still]trim=start={last_t},setpts=PTS-STARTPTS,loop=loop=-1:size=2:start=0[frz];"
+            f"[frz]fade=t=out:st={freeze_sec-1}:d=1[frzf];"
+            f"[vid][frzf]concat=n=2:v=1:a=0",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", out
+        ]
     return _run_ffmpeg_sync(cmd)
 
 
 def _extend_repeat(inp, out, times=2.0) -> tuple[bool, str]:
     times = max(2, min(10, int(times)))
+    has_audio = _has_audio_stream(inp)
     inputs = []
-    filter_parts = []
+    v_filter_parts = []
     for i in range(times):
         inputs.extend(["-i", inp])
-        filter_parts.append(f"[{i}:v]")
-    filter_str = "".join(filter_parts) + f"concat=n={times}:v=1:a=0"
-    cmd = ["ffmpeg", "-y"] + inputs + [
-        "-filter_complex", filter_str,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", out
-    ]
+        v_filter_parts.append(f"[{i}:v]")
+    v_filter = "".join(v_filter_parts) + f"concat=n={times}:v=1:a=0[vout]"
+
+    if has_audio:
+        a_filter_parts = []
+        for i in range(times):
+            a_filter_parts.append(f"[{i}:a]")
+        a_filter = "".join(a_filter_parts) + f"concat=n={times}:v=0:a=1[aout]"
+        filter_str = f"{v_filter};{a_filter}"
+        cmd = ["ffmpeg", "-y"] + inputs + [
+            "-filter_complex", filter_str,
+            "-map", "[vout]", "-map", "[aout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", out
+        ]
+    else:
+        cmd = ["ffmpeg", "-y"] + inputs + [
+            "-filter_complex", v_filter.replace("[vout]", ""),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", out
+        ]
     return _run_ffmpeg_sync(cmd)
 
 
