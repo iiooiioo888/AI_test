@@ -15,7 +15,7 @@ from app.narrative_engine.models.character import Character, Prop, StoryArc
 from app.narrative_engine.graph.knowledge_graph import KnowledgeGraphService
 from app.narrative_engine.services.state_machine import StateMachineService
 from app.narrative_engine.crdt.crdt_engine import CRDTEngine, FieldOperation
-from app.shared import SceneState, Role, FIELD_PERMISSIONS
+from app.shared import SceneState, Role, FIELD_PERMISSIONS, AuditEntry
 
 
 class NarrativeEngine:
@@ -38,12 +38,11 @@ class NarrativeEngine:
             title=title,
             narrative=narrative or Narrative(),
         )
-        scene.audit_log.append({
-            "timestamp": scene.created_at,
-            "user_id": user_id,
-            "action": "CREATE",
-            "details": {"title": title},
-        })
+        scene.audit_log.append(AuditEntry(
+            user_id=user_id,
+            action="CREATE",
+            details={"title": title},
+        ))
         self._scenes[str(scene.id)] = scene
         self.graph.upsert_scene(scene)
         return scene
@@ -171,12 +170,11 @@ class NarrativeEngine:
         branched.branch = branch_name
         branched.parent_version = scene.version
         branched.state = SceneState.DRAFT
-        branched.audit_log = [{
-            "timestamp": branched.created_at,
-            "user_id": user_id,
-            "action": "BRANCH",
-            "details": {"from_scene": scene_id, "branch": branch_name},
-        }]
+        branched.audit_log = [AuditEntry(
+            user_id=user_id,
+            action="BRANCH",
+            details={"from_scene": scene_id, "branch": branch_name},
+        )]
 
         new_id = str(branched.id)
         self._scenes[new_id] = branched
