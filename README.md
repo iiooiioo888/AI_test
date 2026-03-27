@@ -26,6 +26,8 @@
 - [API 文檔](#api-文檔)
 - [部署指南](#部署指南)
 - [安全合規](#安全合規)
+- [開發進度](#-開發進度)
+- [任務待開發](#-任務待開發)
 
 ---
 
@@ -357,7 +359,7 @@ services:
 | **小說改編** | ✅ | 文本自動拆分為結構化場景 |
 | **一致性檢查** | ✅ | 全局圖完整性 + 漣漪效應分析 |
 | **API 層** | ✅ | FastAPI 完整 CRUD + 狀態轉換 + 分支端點 |
-| **測試** | ✅ | 15/15 全部通過 |
+| **CI/CD** | ✅ | GitHub Actions 自動化部署 pipeline |
 
 ```
 app/narrative_engine/
@@ -373,6 +375,41 @@ app/narrative_engine/
 ### 🔜 模塊 3：視頻生成與擴展引擎 — 規劃中
 
 ### 🔜 模塊 4：生產控制與 MLOps — 規劃中
+
+---
+
+## 📋 任務待開發
+
+### 任務：構建企業級 AI 敘事與劇本管理核心
+
+> **Role:** 高級後端架構師 (敘事系統專項)
+> **Context:** 項目 Nexus — 企業級 AI 視頻生產平台
+
+#### 1. 數據模型 (Data Model)
+
+- **關係型 (PostgreSQL)**: 定義 `scenes` 表，包含 JSONB 字段 `content` (對白/動作), `metadata` (時長/地點), `status` (狀態機)。必須包含 `version` (SemVer) 與 `audit_log` (操作審計)。
+- **圖數據庫 (Neo4j)**: 定義節點 `Scene`, `Character`, `Prop`。建立關係 `LEADS_TO` (劇情順序), `CONTAINS` (包含角色), `REQUIRES` (道具依賴)。創建唯一約束與索引。
+- **向量庫 (Milvus)**: 存儲場景語義向量 (768 維)，用於相似度檢索與衝突檢測。
+
+#### 2. 核心邏輯 (Core Logic)
+
+- **狀態機**: 實現 `SceneStateMachine` 類，嚴格控制 `DRAFT` → `REVIEW` → `LOCKED` → `COMPLETED` 轉移，非法轉移拋出 `StateTransitionError`。
+- **漣漪效應**: 實現 `RippleEffectAnalyzer` 類。當場景修改時，遍歷 Neo4j `LEADS_TO` 關係，檢查後續場景的角色狀態 (如：死亡後不能出現) 與道具邏輯。返回衝突報告。
+- **協作同步**: 集成 Yjs (CRDT 算法)，支持多人實時編輯同一劇本字段，實現字段級鎖 (Field-Level Lock)。
+
+#### 3. API 規範 (API Contract)
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `PATCH` | `/scenes/{id}` | 支持部分更新，觸發漣漪分析。返回 200 (成功) 或 409 (衝突) |
+| `GET` | `/scripts/{id}/graph` | 返回劇情依賴圖譜 (JSON 格式) |
+| `POST` | `/scenes/{id}/branch` | 創建劇情分支，複製後續節點並生成新版本 ID |
+
+#### 4. CI/CD 與交付 (CI/CD & Deliverables)
+
+- **CI/CD**: GitHub Actions pipeline，包含 lint、type-check、構建與自動部署。
+- **交付**: Alembic 遷移腳本，Neo4j 初始化 Cypher，Python 服務代碼 (FastAPI)，OpenAPI 文檔。
+- **要求**: 代碼必須包含類型註解 (Type Hints)，錯誤處理邏輯，結構化日誌。
 
 ---
 
