@@ -1,265 +1,308 @@
-<div align="center">
+# AI Video Studio
 
-# 🎬 AI Video Studio
+<p align="center">
+  <strong>企業級 AI 影片後期處理平台</strong><br>
+  <sub>18 種視覺特效 · 8 種影片擴展 · 智慧音訊保留 · 即時進度追蹤</sub>
+</p>
 
-**企業級 AI 影片特效 & 影片擴展平台**
+<p align="center">
+  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://opencv.org"><img src="https://img.shields.io/badge/OpenCV-4.x-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white" alt="OpenCV"></a>
+  <a href="https://ffmpeg.org"><img src="https://img.shields.io/badge/FFmpeg-6.x-007808?style=for-the-badge&logo=ffmpeg&logoColor=white" alt="FFmpeg"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+</p>
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![OpenCV](https://img.shields.io/badge/OpenCV-4.x-5C3EE8?style=flat&logo=opencv&logoColor=white)](https://opencv.org)
-[![FFmpeg](https://img.shields.io/badge/FFmpeg-6.x-007808?style=flat&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-一款基於 AI 的影片後期處理工具，支援 **18 種視覺特效**、**8 種影片擴展模式**，全程保留原始音訊。
-
-[功能亮點](#-功能亮點) ·
-[快速開始](#-快速開始) ·
-[技術架構](#-技術架構) ·
-[API 文件](#-api-文件) ·
-[更新日誌](#-更新日誌)
-
-</div>
-
----
-
-## ✨ 功能亮點
-
-### 🎨 AI 視覺特效（18 種）
-
-<table>
-<tr>
-<td width="50%">
-
-#### 經典特效
-| 圖示 | 特效 | 說明 |
-|:---:|------|------|
-| ⚡ | 故障藝術 | RGB 位移 + 訊號干擾 |
-| 📼 | VHS 復古 | 90 年代錄影帶質感 |
-| 🌆 | 賽博朋克 | 霓虹色調 + 掃描線 |
-| 🎬 | 黑色電影 | 高對比黑白 + 暗角 |
-| ✨ | 夢幻柔光 | 柔焦 + 光暈效果 |
-| 💜 | 霓虹描邊 | 邊緣發光 + 深色背景 |
-
-</td>
-<td width="50%">
-
-#### 藝術風格
-| 圖示 | 特效 | 說明 |
-|:---:|------|------|
-| 👾 | 像素風 | 復古像素化效果 |
-| 🔥 | 熱成像 | 紅外熱力圖效果 |
-| ✏️ | 素描風 | 鉛筆手繪效果 |
-| 💊 | 黑客帝國 | 綠色矩陣數字雨 |
-| 💥 | 漫畫風 | 波普漫畫網點效果 |
-| 🌊 | 波浪扭曲 | 正弦波形變動畫 |
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-#### 🆕 v2.0 新增
-
-| 圖示 | 特效 | 實現方式 |
-|:---:|------|---------|
-| 🎨 | 油畫風 | `cv2.stylization` 筆觸模擬 + 雙邊濾波降級 |
-| 🖌️ | 水彩風 | 邊緣保留濾波 + 飽和度增強 |
-| 📽️ | 老電影 | 去色 + 暗褐調 + 亮度閃爍 + 膠片噪點 + 垂直劃痕 |
-| 🎭 | 雙調色 | 亮度映射到雙色漸變（深藍紫 → 暖金橙） |
-| 🌈 | 色散效果 | R/B 通道偏移 + 光暈疊加 |
-| 🎪 | 卡通化 | 自適應閾值邊緣 + 色彩量化 |
-
-</td>
-</tr>
-</table>
-
-### 📐 影片擴展（8 種）
-
-| 圖示 | 模式 | 說明 | 音訊處理 |
-|:---:|------|------|---------|
-| 🔄 | 無縫循環 | 首尾平滑過渡循環 | 交叉淡入淡出 |
-| ↔️ | 乒乓播放 | 正放 + 倒放 | 音訊同步反向 |
-| 🐢 | AI 慢動作 | 光流插幀慢放 | `atempo` 同步減速 |
-| ⏪ | 倒放 | 完整倒放影片 | `areverse` |
-| 📈 | 速度漸變 | 慢 → 快 → 慢節奏 | 各段獨立變速 |
-| ❄️ | 定格延伸 | 結尾定格淡出 | 原音 + 漸出 |
-| 🔁 | 片段重複 | 影片整體重複播放 | 音訊同步拼接 |
-| 🔪 | 時間切片 | 多幀同屏時間凍結 | — |
-
-### 🔊 智慧音訊保留
-
-所有特效與擴展模式均支援 **自動音訊保留**：
-
-```
-原始影片 ──→ FFmpeg 解封裝 ──→ 音訊軌道 ──┐
-                                          ├──→ FFmpeg 複封裝 ──→ 輸出影片
-特效/擴展處理 ──→ OpenCV 逐幀處理 ──→ 視訊軌道 ─┘
-```
-
-- 🎯 特效處理：自動提取源音訊，視訊處理完畢後合併（AAC 128k）
-- 🎯 擴展模式：音訊隨視訊同步處理（反向、變速、拼接）
-- 🎯 降級策略：無音訊源自動降級為純視訊輸出，不中斷流程
+<p align="center">
+  <a href="#功能特性">功能特性</a> ·
+  <a href="#系統架構">系統架構</a> ·
+  <a href="#快速開始">快速開始</a> ·
+  <a href="#api-文件">API 文件</a> ·
+  <a href="#部署指南">部署指南</a> ·
+  <a href="#更新日誌">更新日誌</a>
+</p>
 
 ---
 
-## 🚀 快速開始
+## 概述
+
+AI Video Studio 是一套基於非同步架構的影片後期處理系統，提供從視覺特效到時間軸操作的完整解決方案。系統採用管道式處理架構，透過 OpenCV 進行逐幀像素級運算，以 FFmpeg 完成編碼與音訊合併，實現零品質損失的端到端處理流程。
+
+**設計原則**
+
+- 無狀態伺服器架構，支援水平擴展
+- 所有 CPU 密集型操作在獨立執行緒中運行，不阻塞事件迴圈
+- 全鏈路音訊保留，確保輸出品質與來源一致
+- WebSocket 雙向通訊，提供毫秒級進度回饋
+
+---
+
+## 功能特性
+
+### 視覺特效引擎
+
+系統內建 18 種可組合的視覺特效，覆蓋從故障藝術到傳統繪畫風格的完整光譜。
+
+| 類別 | 特效 | 技術實現 |
+|------|------|---------|
+| **數位風格** | 故障藝術 · 賽博朋克 · 黑客帝國 | RGB 通道偏移、色彩映射、字元渲染 |
+| **復古質感** | VHS 復古 · 黑色電影 · 老電影 | 色彩退化、CLAHE 對比增強、膠片模擬 |
+| **繪畫風格** | 油畫風 · 水彩風 · 素描風 · 漫畫風 | 風格遷移濾波、邊緣保留、自適應閾值 |
+| **幾何變換** | 像素風 · 波浪扭曲 · 卡通化 | 最近鄰插值、正弦位移場、色彩量化 |
+| **色彩處理** | 夢幻柔光 · 霓虹描邊 · 雙調色 · 色散效果 | 高斯混合、Canny 邊緣發光、漸變映射 |
+| **熱力視覺** | 熱成像 | 偽彩色映射 (Inferno / Jet) |
+
+每種特效均支援 0.1 – 1.0 的強度參數連續調整。
+
+### 影片擴展引擎
+
+8 種時間軸操作模式，涵蓋循環、變速、定格等常見後期需求。
+
+| 模式 | 演算法 | 音訊處理 |
+|------|--------|---------|
+| 無縫循環 | XFade 交叉淡化 | 音訊交叉淡化 |
+| 乒乓播放 | 分離 + 反向 + 拼接 | areverse 同步反向 |
+| AI 慢動作 | Minterpolate 光流插幀 | atempo 線性減速 |
+| 倒放 | reverse / areverse | areverse |
+| 速度漸變 | 分段 PTS 變換 | 分段 atempo |
+| 定格延伸 | Loop 靜幀 + Fade Out | 原音軌道 + 漸出 |
+| 片段重複 | Multi-input Concat | 音訊同步拼接 |
+| 時間切片 | 抽幀 + Tile 馬賽克 | — |
+
+### 智慧音訊處理
+
+系統在處理全鏈路中保留原始音訊軌道：
+
+```
+輸入 ─┬─→ [FFmpeg demux] ─→ 音訊流 ─→ [AAC 128k encode] ─┐
+      │                                                     ├→ [FFmpeg mux] → MP4 輸出
+      └─→ [FFmpeg decode] ─→ raw BGR ─→ [OpenCV effect] ─→ H.264 encode ─┘
+```
+
+對於無音訊的來源檔案（如 GIF），系統自動偵測並降級為純視訊輸出，無需人工干預。
+
+---
+
+## 系統架構
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Client Layer                            │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │  Drag/Drop   │  │  Effect Grid │  │  WebSocket Progress    │  │
+│  │  Upload      │  │  Selector    │  │  (auto-reconnect)      │  │
+│  └──────┬──────┘  └──────┬───────┘  └───────────▲────────────┘  │
+└─────────┼───────────────┼────────────────────────┼──────────────┘
+          │ HTTP POST     │ HTTP POST              │ ws://
+┌─────────▼───────────────▼────────────────────────┼──────────────┐
+│                    FastAPI (ASGI)                 │              │
+│  ┌──────────────┐  ┌────────────────┐  ┌────────┴───────────┐  │
+│  │  Upload      │  │  Task          │  │  WebSocket          │  │
+│  │  Controller  │  │  Dispatcher    │  │  Broadcast Hub      │  │
+│  └──────┬───────┘  └───────┬────────┘  └────────────────────┘  │
+│         │                  │                                    │
+│         │           ┌──────▼────────┐                           │
+│         │           │  Thread Pool  │  (non-blocking)           │
+│         │           └──┬─────────┬──┘                           │
+│         │              │         │                              │
+│  ┌──────▼───────┐  ┌───▼────┐  ┌▼─────────────┐               │
+│  │  File I/O    │  │ OpenCV │  │  FFmpeg CLI   │               │
+│  │  (uploads/)  │  │ Engine │  │  Pipeline     │               │
+│  └──────────────┘  └────────┘  └───────────────┘               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**處理模式**
+
+| 操作類型 | 執行緒模型 | 瓶頸點 | 預期耗時 |
+|---------|-----------|--------|---------|
+| 視覺特效 | `run_in_executor` + OpenCV 逐幀 | CPU (幀率 × 解析度) | 0.5–3× 即時長度 |
+| 影片擴展 | `run_in_executor` + FFmpeg 子行程 | I/O + 編碼 | 取決於模式複雜度 |
+| 音訊合併 | FFmpeg stream copy → mux | I/O | < 5s |
+
+---
+
+## 快速開始
 
 ### 環境需求
 
-- Python 3.10+
-- FFmpeg 6.x+（系統已安裝）
-- 512MB+ 可用記憶體
+| 依賴 | 最低版本 | 用途 |
+|------|---------|------|
+| Python | 3.10 | 執行環境 |
+| FFmpeg | 6.0 | 編解碼與濾鏡 |
+| 磁碟空間 | 1 GB | 暫存檔案（自動清理） |
+| 記憶體 | 512 MB | 逐幀處理緩衝 |
 
-### 安裝與啟動
+### 安裝
 
 ```bash
-# 克隆專案
 git clone https://github.com/iiooiioo888/AI_test.git
 cd AI_test
-
-# 建立虛擬環境
-python3 -m venv venv
-source venv/bin/activate
-
-# 安裝依賴
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# 啟動服務
-python app.py
 ```
 
-服務啟動後訪問 👉 **http://localhost:8888**
+### 啟動
+
+```bash
+python app.py
+# → Uvicorn running on http://0.0.0.0:8888
+```
 
 ### 使用流程
 
 ```
- 上傳影片  →  選擇特效/擴展  →  即時預覽進度  →  下載 / 繼續編輯
-   Step 1        Step 2           Step 3          Step 4
+Step 1          Step 2            Step 3           Step 4
+┌─────────┐    ┌──────────┐     ┌───────────┐    ┌────────────┐
+│ 上傳影片 │ →  │ 選擇特效  │  →  │ 即時進度  │ →  │ 下載結果   │
+│ (拖拽)   │    │ 調整強度  │     │ WebSocket │    │ 繼續編輯   │
+└─────────┘    └──────────┘     └───────────┘    └────────────┘
 ```
 
-1. **上傳** — 拖拽或選擇影片檔案（MP4 / AVI / MOV / MKV / WebM / GIF，最大 500MB）
-2. **編輯** — 切換「AI 特效」或「影片擴展」頁籤，調整強度後套用
-3. **處理** — 即時 WebSocket 推送進度，支援斷線重連
-4. **完成** — 預覽結果、下載影片、或一鍵載入繼續編輯
+1. **上傳** — 支援拖拽、檔案選擇、剪貼簿貼上。格式：MP4 / AVI / MOV / MKV / WebM / GIF，上限 500 MB
+2. **編輯** — 切換「AI 特效」或「影片擴展」頁籤，設定強度 / 參數
+3. **監控** — 即時進度條 + WebSocket 推送，斷線自動重連並查詢任務狀態
+4. **輸出** — 線上預覽、下載 MP4、或一鍵載入結果作為新的編輯來源
 
 ---
 
-## 🏗 技術架構
+## API 文件
+
+### 端點一覽
+
+| 方法 | 路徑 | 說明 | 回應格式 |
+|------|------|------|---------|
+| `GET` | `/` | Web 主頁 | HTML |
+| `GET` | `/api/effects` | 取得所有特效與擴展模式定義 | JSON |
+| `POST` | `/api/upload` | 上傳影片檔案 | `file_id` + `info` |
+| `POST` | `/api/process/effect` | 啟動特效處理任務 | `task_id` |
+| `POST` | `/api/process/extend` | 啟動擴展處理任務 | `task_id` |
+| `GET` | `/api/task/{id}` | 查詢任務狀態與進度 | JSON |
+| `GET` | `/api/download/{id}` | 下載處理完成的影片 | MP4 |
+| `POST` | `/api/import-result` | 將結果導入為新編輯源 | `file_id` + `info` |
+| `GET` | `/api/preview/{id}` | 串流預覽上傳影片 | Video |
+| `WS` | `/ws` | 即時進度推送 | JSON |
+
+### 任務狀態流
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   瀏覽器 (暗色 UI)                        │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────────┐  │
-│  │ 拖拽上傳  │  │ 特效選卡  │  │  WebSocket 即時進度   │  │
-│  └────┬─────┘  └────┬─────┘  └───────────▲───────────┘  │
-└───────┼─────────────┼────────────────────┼──────────────┘
-        │ REST API    │ POST /process      │ ws://
-┌───────▼─────────────▼────────────────────┼──────────────┐
-│              FastAPI (Uvicorn)            │              │
-│  ┌──────────┐  ┌──────────────┐  ┌──────┴──────┐       │
-│  │ Upload   │  │ Task Manager │  │  WS Broadcast│       │
-│  └────┬─────┘  └──────┬───────┘  └─────────────┘       │
-│       │               │                                  │
-│  ┌────▼─────┐  ┌──────▼───────┐                         │
-│  │  OpenCV  │  │   FFmpeg     │   ← executor (thread)   │
-│  │ 逐幀特效  │  │ 編碼/擴展/合併 │                         │
-│  └──────────┘  └──────────────┘                         │
-└─────────────────────────────────────────────────────────┘
+queued → processing → done
+                    ↘ error
 ```
 
-### 核心依賴
-
-| 元件 | 用途 |
-|------|------|
-| **FastAPI** | 非同步 Web 框架，REST + WebSocket |
-| **OpenCV** | CPU 逐幀影像處理（18 種特效） |
-| **FFmpeg** | 視訊編碼、音訊合併、複雜濾鏡鏈 |
-| **NumPy** | 向量化像素運算 |
-| **Uvicorn** | ASGI 伺服器 |
-
----
-
-## 📡 API 文件
-
-| 方法 | 端點 | 說明 |
-|------|------|------|
-| `GET` | `/` | 主頁面 |
-| `GET` | `/api/effects` | 取得特效 & 擴展模式列表 |
-| `POST` | `/api/upload` | 上傳影片（multipart） |
-| `POST` | `/api/process/effect` | 啟動特效處理 |
-| `POST` | `/api/process/extend` | 啟動擴展處理 |
-| `GET` | `/api/task/{task_id}` | 查詢任務狀態 |
-| `GET` | `/api/download/{task_id}` | 下載處理結果 |
-| `POST` | `/api/import-result` | 導入結果作為新編輯源 |
-| `GET` | `/api/preview/{file_id}` | 預覽上傳影片 |
-| `WS` | `/ws` | 即時進度推送 |
-
-### 範例：套用賽博朋克特效
+### 範例
 
 ```bash
-# 1. 上傳
-curl -F "file=@video.mp4" http://localhost:8888/api/upload
-# → {"file_id": "a1b2c3d4", "info": {...}}
+# 上傳影片
+curl -s -F "file=@sample.mp4" http://localhost:8888/api/upload | jq .
+# {"file_id": "a1b2c3d4", "filename": "sample.mp4", "info": {"duration": 12.5, ...}}
 
-# 2. 套用特效
-curl -F "file_id=a1b2c3d4" -F "effect=cyberpunk" -F "intensity=0.7" \
-     http://localhost:8888/api/process/effect
-# → {"task_id": "e5f6g7h8", "effect": "cyberpunk"}
+# 套用賽博朋克特效（強度 0.7）
+curl -s -F "file_id=a1b2c3d4" -F "effect=cyberpunk" -F "intensity=0.7" \
+     http://localhost:8888/api/process/effect | jq .
+# {"task_id": "e5f6g7h8", "effect": "cyberpunk"}
 
-# 3. 查詢進度
-curl http://localhost:8888/api/task/e5f6g7h8
+# 輪詢任務狀態
+curl -s http://localhost:8888/api/task/e5f6g7h8 | jq .
+# {"task_id": "e5f6g7h8", "status": "done", "progress": 100, ...}
 
-# 4. 下載
+# 下載結果
 curl -O http://localhost:8888/api/download/e5f6g7h8
 ```
 
 ---
 
-## 📁 專案結構
+## 部署指南
+
+### 開發環境
+
+```bash
+python app.py
+```
+
+### 生產部署
+
+```bash
+# 使用 Uvicorn 直接啟動（多 worker）
+uvicorn app:app --host 0.0.0.0 --port 8888 --workers 4
+
+# 或使用 Gunicorn + Uvicorn
+gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8888
+```
+
+### 環境變數
+
+| 變數 | 預設值 | 說明 |
+|------|--------|------|
+| `MAX_FILE_SIZE` | `524288000` | 最大上傳檔案大小 (bytes) |
+| `FFMPEG_TIMEOUT` | `600` | FFmpeg 操作逾時 (秒) |
+| `CLEANUP_AGE` | `3600` | 暫存檔案自動清理閾值 (秒) |
+
+### 磁碟管理
+
+系統在 `uploads/` 和 `output/` 目錄下建立暫存檔案，每次啟動時自動清理超過 `CLEANUP_AGE` 秒的舊檔案。建議定期監控磁碟使用量，或搭配 cron 排程清理：
+
+```bash
+# 每日清理超過 6 小時的暫存檔案
+0 */6 * * * find /path/to/AI_test/uploads /path/to/AI_test/output -type f -mmin +360 -delete
+```
+
+---
+
+## 專案結構
 
 ```
 AI_test/
-├── app.py                  # 主應用（FastAPI + 全部處理邏輯）
-├── requirements.txt        # Python 依賴
-├── whitepaper.md           # 企業級 AI 提示詞優化引擎白皮書
+├── app.py                      # 主應用（路由 + 特效邏輯 + 擴展邏輯）
+├── requirements.txt            # Python 相依套件
+├── README.md                   # 本文件
+├── whitepaper.md               # 企業級 AI 提示詞優化引擎白皮書
+├── uploads/                    # 使用者上傳影片（自動管理）
+├── output/                     # 處理輸出影片（自動管理）
 ├── templates/
-│   └── index.html          # 主頁面模板
+│   └── index.html              # SPA 入口
 └── static/
-    ├── css/style.css       # 暗色主題樣式
-    └── js/app.js           # 前端邏輯（上傳/選卡/進度/下載）
+    ├── css/
+    │   └── style.css           # 暗色主題 UI
+    └── js/
+        └── app.js              # 前端邏輯
 ```
 
 ---
 
-## 📋 支援格式
+## 技術棧
 
-| 類型 | 格式 |
-|------|------|
-| **輸入** | MP4, AVI, MOV, MKV, WebM, GIF |
-| **輸出** | MP4 (H.264 + AAC) |
+| 層級 | 技術 | 角色 |
+|------|------|------|
+| Web 框架 | FastAPI 0.135 + Uvicorn | 非同步 REST / WebSocket |
+| 影像處理 | OpenCV 4.x + NumPy | 逐幀像素運算 |
+| 影音編解碼 | FFmpeg 6.x | H.264 編碼、AAC 音訊、濾鏡鏈 |
+| 前端 | Vanilla HTML/CSS/JS | SPA 介面、粒子動畫背景 |
+| 即時通訊 | WebSocket | 雙向進度推送 |
 
 ---
 
-## 📝 更新日誌
+## 更新日誌
 
-### v2.0 — 音訊保留 + 6 種新特效（2026-03-27）
+### v2.0 — 2026-03-27
 
-- 🔊 **音訊保留** — 所有特效和擴展模式支援音訊自動提取與合併
-- 🎨 **6 種新特效** — 油畫風、水彩風、老電影、雙調色、色散、卡通化
-- 📊 **進度追蹤** — 特效處理支援逐幀進度回報（每 ~5%）
-- 🛡️ **健壯性** — 改進錯誤處理、資源清理、FFmpeg 超時保護
-- 🔧 **工具函數** — 新增 `_has_audio_stream()` 等輔助方法
+**新功能**
+- 全鏈路音訊保留機制：特效與擴展模式自動提取、處理、合併音訊軌道
+- 6 種新視覺特效：油畫風、水彩風、老電影、雙調色、色散效果、卡通化
+- `_has_audio_stream()` 音訊偵測工具函數
+
+**改進**
+- 特效處理支援逐幀進度回報（~5% 粒度）
+- FFmpeg 操作逾時保護（預設 600 秒）
+- 資源清理機制強化
 
 ### v1.0 — 初始版本
 
 - 12 種視覺特效 + 8 種影片擴展模式
-- FastAPI + WebSocket 即時進度推送
-- 暗色主題 UI + 拖拽上傳 + 繼續編輯
+- FastAPI + WebSocket 非同步架構
+- 暗色主題 UI，支援拖拽上傳與結果再編輯
 
 ---
 
-<div align="center">
+## 授權
 
-**Built with FastAPI · OpenCV · FFmpeg**
-
-</div>
+本專案以 MIT 授權條款釋出。詳見 [LICENSE](LICENSE)。
