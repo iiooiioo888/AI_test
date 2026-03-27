@@ -342,6 +342,40 @@ services:
 
 ---
 
+## 🔄 開發進度
+
+### ✅ 模塊 1：敘事與劇本引擎 (Narrative Engine) — 已完成
+
+| 組件 | 狀態 | 說明 |
+|------|------|------|
+| **JSON 結構化場景** | ✅ | SceneObject 完整數據模型 (敘事/對話/視覺/音頻/過渡) |
+| **Neo4j 知識圖譜** | ✅ | 角色/道具/場景依賴圖 + BFS 漣漪效應分析 |
+| **狀態機** | ✅ | 嚴格 7 態生命周期 (DRAFT→REVIEW→LOCKED→QUEUED→GENERATING→COMPLETED/FAILED) |
+| **CRDT 協作** | ✅ | LWW-Element-Set 字段級衝突解決 + 向量時鐘 |
+| **RBAC 權限** | ✅ | 5 角色 (admin/director/writer/reviewer/viewer) 字段級控制 |
+| **版本分支** | ✅ | 場景分支創建 + 父版本追蹤 |
+| **小說改編** | ✅ | 文本自動拆分為結構化場景 |
+| **一致性檢查** | ✅ | 全局圖完整性 + 漣漪效應分析 |
+| **API 層** | ✅ | FastAPI 完整 CRUD + 狀態轉換 + 分支端點 |
+| **測試** | ✅ | 15/15 全部通過 |
+
+```
+app/narrative_engine/
+├── models/          # SceneObject, Character, Prop, StoryArc
+├── graph/           # KnowledgeGraphService (漣漪效應分析)
+├── services/        # NarrativeEngine (編排), StateMachine
+├── crdt/            # CRDTEngine (LWW 字段級衝突解決)
+└── api/             # FastAPI Routes (/api/v1/narrative/*)
+```
+
+### 🔜 模塊 2：提示詞優化引擎 (Prompt Engineering Core) — 規劃中
+
+### 🔜 模塊 3：視頻生成與擴展引擎 — 規劃中
+
+### 🔜 模塊 4：生產控制與 MLOps — 規劃中
+
+---
+
 ## 授權
 
 本專案以 MIT 授權條款釋出。
