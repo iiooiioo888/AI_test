@@ -13,6 +13,9 @@ from .endpoints import (
     health,
 )
 
+# Narrative Engine routes
+from app.narrative_engine.api.routes import router as narrative_router
+
 api_router = APIRouter()
 
 # 認證與用戶
@@ -33,6 +36,9 @@ api_router.include_router(prompts.router, prefix="/prompts", tags=["Prompts"])
 
 # 視頻生成
 api_router.include_router(generation.router, prefix="/generation", tags=["Generation"])
+
+# 敘事引擎 (Narrative Engine) — 場景 CRUD + 狀態機 + 漣漪分析
+api_router.include_router(narrative_router)
 
 # 健康檢查
 api_router.include_router(health.router, prefix="/health", tags=["Health"])

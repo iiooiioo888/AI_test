@@ -267,6 +267,54 @@ services:
 
 ---
 
+## 📋 任務待開發 — 企業級 AI 敘事與劇本管理核心
+
+> **Role:** 高級後端架構師 (敘事系統專項) · **Context:** 項目 Nexus — 企業級 AI 視頻生產平台
+
+### 1. 數據模型 (Data Model)
+
+| 數據存儲 | Schema 定義 |
+|:---|:---|
+| **PostgreSQL** (關係型) | `scenes` 表 — JSONB `content` (對白/動作) · `metadata` (時長/地點) · `status` (狀態機) · `version` (SemVer) · `audit_log` (操作審計) |
+| **Neo4j** (圖數據庫) | 節點: `Scene` · `Character` · `Prop` · 關係: `LEADS_TO` (劇情順序) · `CONTAINS` (包含角色) · `REQUIRES` (道具依賴) · 唯一約束 + 索引 |
+| **Milvus** (向量庫) | 768 維場景語義向量 — 用於相似度檢索與衝突檢測 |
+
+### 2. 核心邏輯 (Core Logic)
+
+| 模塊 | 類名 | 功能 |
+|:---|:---|:---|
+| 🔄 **狀態機** | `SceneStateMachine` | 嚴格控制 `DRAFT → REVIEW → LOCKED → COMPLETED` 轉移，非法轉移拋出 `StateTransitionError` |
+| 🌊 **漣漪效應** | `RippleEffectAnalyzer` | 場景修改時遍歷 Neo4j `LEADS_TO` 關係，檢查後續場景的角色狀態 (如：死亡後不能出現) 與道具邏輯，返回衝突報告 |
+| 🤝 **協作同步** | Yjs CRDT Engine | 集成 Yjs (CRDT 算法)，支持多人實時編輯同一劇本字段，實現字段級鎖 (Field-Level Lock) |
+
+### 3. API 規範 (API Contract)
+
+| 方法 | 端點 | 狀態碼 | 說明 |
+|:---:|:---|:---:|:---|
+| `PATCH` | `/scenes/{id}` | `200` / `409` | 部分更新場景，自動觸發漣漪分析 |
+| `GET` | `/scripts/{id}/graph` | `200` | 返回劇情依賴圖譜 (JSON 格式) |
+| `POST` | `/scenes/{id}/branch` | `201` | 創建劇情分支，複製後續節點並生成新版本 ID |
+
+### 4. 測試與交付 (Testing & Deliverables)
+
+- **測試**: 單元測試覆蓋率 > 90%，包含狀態機邊界測試與圖譜衝突模擬
+- **交付物**:
+  - Alembic 遷移腳本 (PostgreSQL)
+  - Neo4j 初始化 Cypher 腳本
+  - Python 服務代碼 (FastAPI)
+  - OpenAPI 文檔自動生成
+- **代碼規範**: Type Hints (類型註解) · 錯誤處理邏輯 · 結構化日誌 (structlog)
+
+### 開發優先級
+
+```
+Phase 1: 更新前端 UI 代碼 (templates + static)
+Phase 2: 優化核心代碼 — 敘事引擎 / 狀態機 / 漣漪分析
+Phase 3: 數據庫遷移腳本與 API 端點完善
+```
+
+---
+
 ## 📊 路線圖
 
 <div align="center">

@@ -1,404 +1,517 @@
 """
-Narrative Engine API — FastAPI routes.
+Narrative Engine API Routes
 
-Enhanced with:
-- Undo/Redo endpoints
-- Version snapshots
-- Dependency chain queries
-- Character co-appearance analysis
-- Orphan scene detection
-- Arc management with reordering
-- Conflict log
-- Field history
+Implements the core API contract:
+  PATCH  /scenes/{id}           — partial update + ripple analysis → 200 / 409
+  GET    /scripts/{id}/graph    — dependency graph JSON → 200
+  POST   /scenes/{id}/branch    — create story branch → 201
+
+Plus supplementary endpoints for full scene CRUD, state transitions,
+consistency checks, and stats.
 """
 from __future__ import annotations
 
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.narrative_engine.services.narrative_service import NarrativeEngine
-from app.narrative_engine.models.scene import Narrative
+from app.narrative_engine.services.state_machine import StateTransitionError
+from app.narrative_engine.services.ripple_analyzer import RippleEffectAnalyzer
 from app.shared import SceneState, Role
 
 
-router = APIRouter(prefix="/api/v1/narrative", tags=["Narrative Engine"])
+router = APIRouter(prefix="/narrative", tags=["Narrative Engine"])
 
-# Singleton engine instance
-_engine = NarrativeEngine()
+# Singleton engine instance (replaced with DI in production)
+_engine: Optional[NarrativeEngine] = None
+_analyzer: Optional[RippleEffectAnalyzer] = None
 
 
 def get_engine() -> NarrativeEngine:
+    global _engine
+    if _engine is None:
+        _engine = NarrativeEngine()
     return _engine
 
 
-# ── Request/Response Schemas ────────────────────────────────────
+def get_analyzer() -> RippleEffectAnalyzer:
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = RippleEffectAnalyzer(get_engine().graph)
+    return _analyzer
 
-class CreateSceneRequest(BaseModel):
+
+# ── Request / Response Models ──────────────────────────────────
+
+class SceneCreateRequest(BaseModel):
     title: str
-    user_id: str = "system"
     narrative_beat: str = ""
-    narrative_description: str = ""
+    narrative_desc: str = ""
+    emotional_arc: Optional[str] = None
+    conflict: Optional[str] = None
     character_ids: list[str] = Field(default_factory=list)
     prop_ids: list[str] = Field(default_factory=list)
-    depends_on: list[str] = Field(default_factory=list)
 
 
-class UpdateFieldRequest(BaseModel):
-    path: str = Field(..., description="Dot-path, e.g. 'narrative.beat'")
-    value: str | dict | list | int | float | bool
-    user_id: str = "system"
-    role: str = "writer"
+class ScenePatchRequest(BaseModel):
+    """Partial update — only provided fields are modified."""
+    title: Optional[str] = None
+    narrative_beat: Optional[str] = None
+    narrative_desc: Optional[str] = None
+    emotional_arc: Optional[str] = None
+    conflict: Optional[str] = None
+    visual_setting: Optional[str] = None
+    visual_time: Optional[str] = None
+    camera_shot: Optional[str] = None
+    lighting_style: Optional[str] = None
+    action_description: Optional[str] = None
+    dialogue: Optional[list[dict]] = None
+    character_ids: Optional[list[str]] = None
+    prop_ids: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    duration_estimate: Optional[float] = None
+    complexity_score: Optional[float] = None
+    notes: Optional[str] = None
 
 
 class TransitionRequest(BaseModel):
-    new_state: SceneState
+    target_state: SceneState
     user_id: str = "system"
 
 
-class CreateBranchRequest(BaseModel):
+class BranchRequest(BaseModel):
     branch_name: str
     user_id: str = "system"
 
 
-class AdaptTextRequest(BaseModel):
-    text: str
-    title: str
-    user_id: str = "system"
-    max_scenes: int = 20
+class RippleCheckResponse(BaseModel):
+    safe: bool
+    conflicts: list[dict] = Field(default_factory=list)
+    max_severity: str = "low"
+    total_affected: int = 0
 
 
-class UndoRedoRequest(BaseModel):
-    user_id: str = "system"
+# ── Endpoints ──────────────────────────────────────────────────
 
-
-class SnapshotRequest(BaseModel):
-    description: str = ""
-
-
-class AddToArcRequest(BaseModel):
-    scene_id: str
-    position: Optional[int] = None
-
-
-class ReorderArcRequest(BaseModel):
-    scene_ids: list[str]
-
-
-class ArcCreateRequest(BaseModel):
-    title: str
-    genre: str = ""
-    logline: str = ""
-    theme: Optional[str] = None
-
-
-# ── Health & Stats ──────────────────────────────────────────────
-
-@router.get("/health")
-async def health():
+@router.post("/scenes", status_code=status.HTTP_201_CREATED)
+async def create_scene(req: SceneCreateRequest):
+    """Create a new scene."""
     engine = get_engine()
-    return {"status": "ok", "stats": engine.get_stats()}
+    from app.narrative_engine.models.scene import Narrative
 
-
-# ── Scene CRUD ──────────────────────────────────────────────────
-
-@router.post("/scenes")
-async def create_scene(req: CreateSceneRequest):
-    engine = get_engine()
-    narrative = Narrative(
-        beat=req.narrative_beat,
-        description=req.narrative_description,
-    )
-    depends_on_uuids = [UUID(d) for d in req.depends_on] if req.depends_on else []
     scene = engine.create_scene(
         title=req.title,
-        user_id=req.user_id,
-        narrative=narrative,
+        user_id="system",
+        narrative=Narrative(
+            beat=req.narrative_beat,
+            description=req.narrative_desc,
+            emotional_arc=req.emotional_arc,
+            conflict=req.conflict,
+        ),
         character_ids=req.character_ids,
         prop_ids=req.prop_ids,
-        depends_on=depends_on_uuids,
     )
-    return {"scene": scene.model_dump(), "id": str(scene.id)}
-
-
-@router.get("/scenes")
-async def list_scenes(state: Optional[SceneState] = None,
-                      branch: Optional[str] = None):
-    engine = get_engine()
-    scenes = engine.list_scenes(state=state, branch=branch)
-    return {
-        "scenes": [s.model_dump() for s in scenes],
-        "total": len(scenes),
-    }
+    return _scene_to_dict(scene)
 
 
 @router.get("/scenes/{scene_id}")
 async def get_scene(scene_id: str):
+    """Get scene details."""
     engine = get_engine()
     scene = engine.get_scene(scene_id)
     if not scene:
-        raise HTTPException(404, "Scene not found")
-    return scene.model_dump()
+        raise HTTPException(404, f"Scene {scene_id} not found")
+    return _scene_to_dict(scene)
 
 
-@router.patch("/scenes/{scene_id}/field")
-async def update_field(scene_id: str, req: UpdateFieldRequest):
+@router.get("/scenes")
+async def list_scenes(
+    state: Optional[str] = Query(None, description="Filter by state"),
+    branch: Optional[str] = Query(None, description="Filter by branch"),
+):
+    """List all scenes with optional filters."""
     engine = get_engine()
-    try:
-        role = Role(req.role)
-    except ValueError:
-        raise HTTPException(400, f"Invalid role: {req.role}")
-    try:
-        engine.update_scene_field(
-            scene_id, req.path, req.value, req.user_id, role
+    state_enum = SceneState(state) if state else None
+    scenes = engine.list_scenes(state=state_enum, branch=branch)
+    return [_scene_to_dict(s) for s in scenes]
+
+
+@router.patch("/scenes/{scene_id}", status_code=status.HTTP_200_OK)
+async def patch_scene(scene_id: str, req: ScenePatchRequest):
+    """
+    Partially update a scene. Triggers ripple effect analysis.
+    Returns 200 on success, 409 if conflicts are detected.
+    """
+    engine = get_engine()
+    analyzer = get_analyzer()
+
+    scene = engine.get_scene(scene_id)
+    if not scene:
+        raise HTTPException(404, f"Scene {scene_id} not found")
+
+    # Cannot edit completed or generating scenes
+    if scene.state in (SceneState.COMPLETED, SceneState.GENERATING):
+        raise HTTPException(
+            422,
+            f"Cannot edit scene in state {scene.state.value}. "
+            "Only DRAFT, REVIEW, LOCKED, and FAILED scenes are editable.",
         )
-        return {"status": "ok", "path": req.path}
-    except (ValueError, PermissionError) as e:
-        raise HTTPException(400, str(e))
+
+    # Track which fields changed for targeted ripple analysis
+    changed_fields = []
+
+    # Apply partial updates
+    if req.title is not None:
+        scene.title = req.title
+        changed_fields.append("title")
+
+    if req.narrative_beat is not None:
+        scene.narrative.beat = req.narrative_beat
+        changed_fields.append("narrative.beat")
+
+    if req.narrative_desc is not None:
+        scene.narrative.description = req.narrative_desc
+        changed_fields.append("narrative.description")
+
+    if req.emotional_arc is not None:
+        scene.narrative.emotional_arc = req.emotional_arc
+        changed_fields.append("narrative.emotional_arc")
+
+    if req.conflict is not None:
+        scene.narrative.conflict = req.conflict
+        changed_fields.append("narrative.conflict")
+
+    if req.visual_setting is not None:
+        scene.visual.setting = req.visual_setting
+        changed_fields.append("visual.setting")
+
+    if req.visual_time is not None:
+        scene.visual.time_of_day = req.visual_time
+        changed_fields.append("visual.time_of_day")
+
+    if req.camera_shot is not None:
+        scene.visual.camera.shot_type = req.camera_shot
+        changed_fields.append("visual.camera")
+
+    if req.lighting_style is not None:
+        scene.visual.lighting.style = req.lighting_style
+        changed_fields.append("visual.lighting")
+
+    if req.action_description is not None:
+        scene.visual.action_description = req.action_description
+        changed_fields.append("visual.action_description")
+
+    if req.dialogue is not None:
+        from app.narrative_engine.models.scene import DialogueLine
+        scene.dialogue = [DialogueLine(**d) for d in req.dialogue]
+        changed_fields.append("dialogue")
+
+    if req.character_ids is not None:
+        scene.character_ids = req.character_ids
+        changed_fields.append("character_ids")
+
+    if req.prop_ids is not None:
+        scene.prop_ids = req.prop_ids
+        changed_fields.append("prop_ids")
+
+    if req.tags is not None:
+        scene.metadata.tags = req.tags
+        changed_fields.append("metadata.tags")
+
+    if req.duration_estimate is not None:
+        scene.metadata.duration_estimate = req.duration_estimate
+        changed_fields.append("metadata.duration_estimate")
+
+    if req.complexity_score is not None:
+        scene.metadata.complexity_score = req.complexity_score
+        changed_fields.append("metadata.complexity_score")
+
+    if req.notes is not None:
+        scene.metadata.notes = req.notes
+        changed_fields.append("metadata.notes")
+
+    # Version bump
+    scene.version += 1
+
+    # Audit
+    from app.shared import AuditEntry
+    scene.audit_log.append(AuditEntry(
+        user_id="system",
+        action="PATCH",
+        details={"changed_fields": changed_fields},
+    ))
+
+    # Re-sync to graph
+    engine.graph.upsert_scene(scene)
+
+    # Ripple analysis
+    ripple_result = analyzer.quick_check(scene_id, changed_fields)
+    if ripple_result and ripple_result.get("conflicts"):
+        # Return 409 with conflict details
+        return {
+            "status": "conflict",
+            "scene": _scene_to_dict(scene),
+            "ripple_analysis": ripple_result,
+        }
+
+    return {
+        "status": "ok",
+        "scene": _scene_to_dict(scene),
+        "ripple_analysis": ripple_result,
+    }
 
 
-@router.delete("/scenes/{scene_id}")
-async def delete_scene(scene_id: str, user_id: str = "system"):
+@router.get("/scripts/{script_id}/graph")
+async def get_script_graph(script_id: str):
+    """
+    Return the dependency graph for a script/project as JSON.
+    Includes all scenes, characters, props, and their relationships.
+    """
     engine = get_engine()
-    if engine.delete_scene(scene_id, user_id):
-        return {"status": "deleted"}
-    raise HTTPException(404, "Scene not found")
+    graph = engine.graph
+
+    # Build node list
+    nodes = []
+    for sid, info in graph._scenes.items():
+        nodes.append({
+            "id": sid,
+            "type": "scene",
+            "title": info.get("title", ""),
+            "state": info.get("state", ""),
+        })
+    for cid, char in graph._characters.items():
+        nodes.append({
+            "id": cid,
+            "type": "character",
+            "name": char.name,
+        })
+    for pid, prop in graph._props.items():
+        nodes.append({
+            "id": pid,
+            "type": "prop",
+            "name": prop.name,
+        })
+
+    # Build edge list
+    edges = []
+    type_map = {
+        "FEATURES_CHARACTER": "CONTAINS",
+        "USES_PROP": "REQUIRES",
+        "DEPENDS_ON": "LEADS_TO",
+    }
+    for edge in graph._edges:
+        edges.append({
+            "source": edge["source"],
+            "target": edge["target"],
+            "type": type_map.get(edge["type"], edge["type"]),
+        })
+
+    # Stats
+    stats = graph.get_graph_stats()
+
+    return {
+        "script_id": script_id,
+        "nodes": nodes,
+        "edges": edges,
+        "stats": stats,
+        "orphan_scenes": graph.find_orphan_scenes(),
+        "connected_components": len(graph.find_isolated_subgraphs()),
+    }
 
 
-# ── State Transitions ──────────────────────────────────────────
+@router.post("/scenes/{scene_id}/branch", status_code=status.HTTP_201_CREATED)
+async def create_branch(scene_id: str, req: BranchRequest):
+    """
+    Create a story branch from a scene.
+    Copies the scene and all downstream nodes into a new version branch.
+    Returns the new scene with a fresh version ID.
+    """
+    engine = get_engine()
+
+    scene = engine.get_scene(scene_id)
+    if not scene:
+        raise HTTPException(404, f"Scene {scene_id} not found")
+
+    branched = engine.create_branch(
+        scene_id=scene_id,
+        branch_name=req.branch_name,
+        user_id=req.user_id,
+    )
+
+    return {
+        "status": "created",
+        "scene": _scene_to_dict(branched),
+        "original_scene_id": scene_id,
+        "branch_name": req.branch_name,
+    }
+
 
 @router.post("/scenes/{scene_id}/transition")
 async def transition_scene(scene_id: str, req: TransitionRequest):
+    """
+    Attempt a state transition on a scene.
+    Raises 422 with diagnostic details on invalid transitions.
+    """
     engine = get_engine()
+
     try:
-        engine.transition_scene(scene_id, req.new_state, req.user_id)
+        engine.transition_scene(scene_id, req.target_state, req.user_id)
         scene = engine.get_scene(scene_id)
-        return {"status": "ok", "new_state": scene.state.value}
-    except Exception as e:
-        raise HTTPException(400, str(e))
+        return {
+            "status": "ok",
+            "scene": _scene_to_dict(scene),
+            "valid_next_states": engine.get_valid_next_states(scene_id),
+        }
+    except StateTransitionError as e:
+        raise HTTPException(422, detail=e.to_dict())
+    except ValueError as e:
+        raise HTTPException(404, detail=str(e))
 
 
 @router.get("/scenes/{scene_id}/valid-transitions")
-async def valid_transitions(scene_id: str):
+async def get_valid_transitions(scene_id: str):
+    """Get all valid next states for a scene."""
     engine = get_engine()
-    return {"transitions": engine.get_valid_next_states(scene_id)}
-
-
-# ── Consistency & Impact ────────────────────────────────────────
-
-@router.get("/scenes/{scene_id}/consistency")
-async def check_consistency(scene_id: str):
-    engine = get_engine()
-    return engine.check_scene_consistency(scene_id)
-
-
-@router.get("/consistency/global")
-async def global_consistency():
-    engine = get_engine()
-    return engine.check_global_consistency()
+    scene = engine.get_scene(scene_id)
+    if not scene:
+        raise HTTPException(404, f"Scene {scene_id} not found")
+    return {
+        "scene_id": scene_id,
+        "current_state": scene.state.value,
+        "valid_transitions": engine.get_valid_next_states(scene_id),
+    }
 
 
 @router.get("/scenes/{scene_id}/impact-analysis")
 async def impact_analysis(scene_id: str):
+    """
+    Full ripple effect analysis for a scene.
+    Returns detailed conflict report.
+    """
     engine = get_engine()
     scene = engine.get_scene(scene_id)
     if not scene:
-        raise HTTPException(404, "Scene not found")
-    return engine.check_scene_consistency(scene_id)
+        raise HTTPException(404, f"Scene {scene_id} not found")
+
+    consistency = engine.check_scene_consistency(scene_id)
+    return consistency
 
 
-# ── Dependency Chains ───────────────────────────────────────────
-
-@router.get("/scenes/{scene_id}/dependencies")
-async def get_dependencies(scene_id: str):
+@router.get("/scenes/{scene_id}/graph")
+async def get_scene_graph(scene_id: str):
+    """
+    Get the dependency graph centered on a specific scene.
+    Returns upstream/downstream chains and co-appearances.
+    """
     engine = get_engine()
     scene = engine.get_scene(scene_id)
     if not scene:
-        raise HTTPException(404, "Scene not found")
-    chains = engine.get_dependency_chains(scene_id)
+        raise HTTPException(404, f"Scene {scene_id} not found")
+
     upstream = engine.get_upstream_scenes(scene_id)
     downstream = engine.get_downstream_scenes(scene_id)
+    chains = engine.get_dependency_chains(scene_id)
+
     return {
         "scene_id": scene_id,
+        "upstream": upstream,
+        "downstream": downstream,
         "dependency_chains": chains,
-        "upstream_scenes": upstream,
-        "downstream_scenes": downstream,
-        "chain_count": len(chains),
+        "character_co_appearances": engine.get_character_co_appearances(),
     }
 
 
-@router.get("/orphans")
-async def get_orphan_scenes():
+@router.get("/consistency/global")
+async def global_consistency_check():
+    """Run consistency checks across all scenes."""
     engine = get_engine()
-    return {"orphans": engine.get_orphan_scenes()}
+    return engine.check_global_consistency()
 
 
-# ── Character Analysis ──────────────────────────────────────────
-
-@router.get("/characters/co-appearances")
-async def character_co_appearances():
+@router.get("/stats")
+async def get_stats():
+    """Get engine statistics."""
     engine = get_engine()
-    return engine.get_character_co_appearances()
+    return engine.get_stats()
 
 
-# ── Undo / Redo ────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────
 
-@router.post("/undo")
-async def undo(req: UndoRedoRequest):
-    engine = get_engine()
-    result = engine.undo(req.user_id)
-    if result is None:
-        raise HTTPException(400, "Nothing to undo")
-    return {"status": "undone", "operation": result}
-
-
-@router.post("/redo")
-async def redo(req: UndoRedoRequest):
-    engine = get_engine()
-    result = engine.redo(req.user_id)
-    if result is None:
-        raise HTTPException(400, "Nothing to redo")
-    return {"status": "redone", "operation": result}
-
-
-@router.get("/undo-status/{user_id}")
-async def undo_status(user_id: str):
-    engine = get_engine()
+def _scene_to_dict(scene) -> dict:
+    """Serialize a SceneObject to a JSON-safe dict."""
     return {
-        "can_undo": engine.can_undo(user_id),
-        "can_redo": engine.can_redo(user_id),
-        "undo_stack": engine.get_undo_stack(user_id),
-    }
-
-
-# ── Version Snapshots ──────────────────────────────────────────
-
-@router.post("/snapshots")
-async def create_snapshot(req: SnapshotRequest):
-    engine = get_engine()
-    return engine.create_snapshot(req.description)
-
-
-@router.get("/snapshots")
-async def list_snapshots():
-    engine = get_engine()
-    return {"snapshots": engine.get_snapshots()}
-
-
-# ── Conflict & Field History ───────────────────────────────────
-
-@router.get("/conflicts")
-async def conflict_log(limit: int = Query(50, le=200)):
-    engine = get_engine()
-    return {"conflicts": engine.get_conflict_log()[:limit]}
-
-
-@router.get("/scenes/{scene_id}/field-history")
-async def field_history(scene_id: str, path: str):
-    engine = get_engine()
-    history = engine.get_field_history(scene_id, path)
-    if history is None:
-        return {"path": path, "changes": [], "message": "No history for this field"}
-    return history
-
-
-# ── Branching ───────────────────────────────────────────────────
-
-@router.post("/scenes/{scene_id}/branch")
-async def create_branch(scene_id: str, req: CreateBranchRequest):
-    engine = get_engine()
-    try:
-        branched = engine.create_branch(
-            scene_id, req.branch_name, req.user_id
-        )
-        return {"scene": branched.model_dump(), "id": str(branched.id)}
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-
-@router.get("/branches")
-async def list_branches():
-    engine = get_engine()
-    return {"branches": engine.list_branches()}
-
-
-# ── Story Arcs ──────────────────────────────────────────────────
-
-@router.post("/arcs")
-async def create_arc(req: ArcCreateRequest):
-    engine = get_engine()
-    arc = engine.create_story_arc(
-        title=req.title, genre=req.genre,
-        logline=req.logline, theme=req.theme,
-    )
-    return {"arc": arc.model_dump(), "id": str(arc.id)}
-
-
-@router.get("/arcs")
-async def list_arcs():
-    engine = get_engine()
-    arcs = engine.list_story_arcs()
-    return {"arcs": [a.model_dump() for a in arcs], "total": len(arcs)}
-
-
-@router.get("/arcs/{arc_id}")
-async def get_arc(arc_id: str):
-    engine = get_engine()
-    arc = engine.get_story_arc(arc_id)
-    if not arc:
-        raise HTTPException(404, "Story arc not found")
-    return arc.model_dump()
-
-
-@router.post("/arcs/{arc_id}/scenes")
-async def add_scene_to_arc(arc_id: str, req: AddToArcRequest):
-    engine = get_engine()
-    try:
-        engine.add_scene_to_arc(arc_id, req.scene_id, req.position)
-        return {"status": "ok"}
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-
-@router.delete("/arcs/{arc_id}/scenes/{scene_id}")
-async def remove_scene_from_arc(arc_id: str, scene_id: str):
-    engine = get_engine()
-    if engine.remove_scene_from_arc(arc_id, scene_id):
-        return {"status": "ok"}
-    raise HTTPException(404, "Scene not found in arc")
-
-
-@router.put("/arcs/{arc_id}/reorder")
-async def reorder_arc(arc_id: str, req: ReorderArcRequest):
-    engine = get_engine()
-    if engine.reorder_arc_scenes(arc_id, req.scene_ids):
-        return {"status": "ok"}
-    raise HTTPException(400, "Failed to reorder arc scenes")
-
-
-# ── Novel Adaptation ───────────────────────────────────────────
-
-@router.post("/adapt")
-async def adapt_text(req: AdaptTextRequest):
-    engine = get_engine()
-    arc = engine.adapt_from_text(req.text, req.title, req.user_id, req.max_scenes)
-    return {"arc": arc.model_dump(), "id": str(arc.id)}
-
-
-# ── Graph Stats ────────────────────────────────────────────────
-
-@router.get("/graph/stats")
-async def graph_stats():
-    engine = get_engine()
-    return engine.graph.get_graph_stats()
-
-
-@router.get("/graph/edges")
-async def graph_edges():
-    engine = get_engine()
-    return {
-        "edges": engine.graph._edges,
-        "total": len(engine.graph._edges),
+        "id": str(scene.id),
+        "title": scene.title,
+        "state": scene.state.value,
+        "version": scene.version,
+        "branch": scene.branch,
+        "created_at": scene.created_at.isoformat(),
+        "updated_at": scene.updated_at.isoformat(),
+        "narrative": {
+            "beat": scene.narrative.beat,
+            "description": scene.narrative.description,
+            "emotional_arc": scene.narrative.emotional_arc,
+            "conflict": scene.narrative.conflict,
+            "outcome": scene.narrative.outcome,
+        },
+        "dialogue": [
+            {
+                "character_id": d.character_id,
+                "text": d.text,
+                "emotion": d.emotion,
+                "tone": d.tone,
+                "timing": d.timing,
+            }
+            for d in scene.dialogue
+        ],
+        "visual": {
+            "setting": scene.visual.setting,
+            "time_of_day": scene.visual.time_of_day,
+            "weather": scene.visual.weather,
+            "atmosphere": scene.visual.atmosphere,
+            "camera": {
+                "shot_type": scene.visual.camera.shot_type,
+                "movement": scene.visual.camera.movement,
+                "focus_point": scene.visual.camera.focus_point,
+                "lens_mm": scene.visual.camera.lens_mm,
+            },
+            "lighting": {
+                "style": scene.visual.lighting.style,
+                "key_light": scene.visual.lighting.key_light,
+                "mood": scene.visual.lighting.mood,
+                "color_temperature": scene.visual.lighting.color_temperature,
+            },
+            "key_objects": scene.visual.key_objects,
+            "action_description": scene.visual.action_description,
+            "style_reference": scene.visual.style_reference,
+        },
+        "audio": {
+            "music_style": scene.audio.music_style,
+            "ambient": scene.audio.ambient,
+            "sfx": scene.audio.sfx,
+        },
+        "character_ids": scene.character_ids,
+        "prop_ids": scene.prop_ids,
+        "depends_on": [str(d) for d in scene.depends_on],
+        "metadata": {
+            "genre": scene.metadata.genre,
+            "tags": scene.metadata.tags,
+            "duration_estimate": scene.metadata.duration_estimate,
+            "complexity_score": scene.metadata.complexity_score,
+            "notes": scene.metadata.notes,
+        },
+        "audit_log": [
+            {
+                "timestamp": e.timestamp.isoformat(),
+                "user_id": e.user_id,
+                "action": e.action,
+                "details": e.details,
+            }
+            for e in scene.audit_log[-20:]  # last 20 entries
+        ],
+        "parent_version": scene.parent_version,
+        "generated_video_url": scene.generated_video_url,
     }
