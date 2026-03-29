@@ -1,495 +1,331 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AVP — AI Video Production Platform</title>
+<title>AVP Studio - 企業級 AI 視頻生產平台</title>
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-
-<!-- Animated Background -->
-<canvas id="bgCanvas"></canvas>
-<div class="bg-overlay"></div>
 
 <!-- ═══ Header ═══ -->
 <header class="header">
   <div class="logo">
     <span class="logo-icon">🎬</span>
     <span class="logo-text">AVP Studio</span>
-    <span class="logo-badge">NEXUS</span>
+    <span class="logo-badge">PRO</span>
   </div>
   <nav class="header-nav">
-    <button class="nav-tab active" data-section="video">
-      <span class="nav-icon">🎥</span> 視頻處理
+    <button class="nav-tab active" data-section="dashboard">
+      <span class="nav-icon">📊</span> 儀表板
     </button>
-    <button class="nav-tab" data-section="narrative">
-      <span class="nav-icon">📖</span> 敘事管理
+    <button class="nav-tab" data-section="projects">
+      <span class="nav-icon">📁</span> 項目
     </button>
-    <button class="nav-tab" data-section="graph">
-      <span class="nav-icon">🕸️</span> 劇情圖譜
+    <button class="nav-tab" data-section="scenes">
+      <span class="nav-icon">🎬</span> 場景
+    </button>
+    <button class="nav-tab" data-section="generate">
+      <span class="nav-icon">✨</span> 生成
     </button>
   </nav>
   <div class="header-right">
-    <div class="status-pill" id="statusPill">
+    <div class="health-status" id="healthStatus">
       <span class="status-dot"></span>
-      <span>就绪</span>
+      <span class="status-text">就緒</span>
     </div>
+    <button class="btn-icon" id="userMenu" title="用戶菜單">👤</button>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SECTION: Video Processing
-     ═══════════════════════════════════════════════════════════ -->
-<div class="section active" id="section-video">
+<!-- ═══ Main Content ═══ -->
+<main class="main-content">
 
-  <!-- Step Indicator -->
-  <nav class="steps-bar" id="stepsBar">
-    <div class="step-item active" data-step="0">
-      <span class="step-num">1</span>
-      <span class="step-label">上传</span>
+  <!-- ═══ Dashboard ═══ -->
+  <section class="section active" id="section-dashboard">
+    <div class="section-header">
+      <h1>儀表板</h1>
+      <p>系統狀態與統計</p>
     </div>
-    <div class="step-connector"></div>
-    <div class="step-item" data-step="1">
-      <span class="step-num">2</span>
-      <span class="step-label">编辑</span>
-    </div>
-    <div class="step-connector"></div>
-    <div class="step-item" data-step="2">
-      <span class="step-num">3</span>
-      <span class="step-label">处理</span>
-    </div>
-    <div class="step-connector"></div>
-    <div class="step-item" data-step="3">
-      <span class="step-num">4</span>
-      <span class="step-label">完成</span>
-    </div>
-  </nav>
 
-  <main class="main">
-    <!-- Step 1: Upload -->
-    <section class="upload-zone" id="uploadZone">
-      <div class="upload-inner">
-        <div class="upload-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-        </div>
-        <h2>拖拽视频到这里</h2>
-        <p>或 <label class="upload-btn">选择文件<input type="file" id="fileInput" accept="video/*,.gif" hidden></label></p>
-        <p class="upload-hint">支持 MP4 / AVI / MOV / MKV / WebM / GIF · 最大 500MB</p>
-        <div class="upload-formats">
-          <span>MP4</span><span>AVI</span><span>MOV</span><span>MKV</span><span>WebM</span><span>GIF</span>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📁</div>
+        <div class="stat-info">
+          <div class="stat-value" id="statProjects">0</div>
+          <div class="stat-label">項目總數</div>
         </div>
       </div>
-      <div class="upload-loading" id="uploadLoading" style="display:none">
-        <div class="spinner"></div>
-        <p id="uploadProgressText">上传中...</p>
-        <div class="upload-progress-bar">
-          <div class="upload-progress-fill" id="uploadProgressFill"></div>
+      <div class="stat-card">
+        <div class="stat-icon">🎬</div>
+        <div class="stat-info">
+          <div class="stat-value" id="statScenes">0</div>
+          <div class="stat-label">場景總數</div>
         </div>
       </div>
-    </section>
-
-    <!-- Step 2: Preview + Tools -->
-    <section class="workspace" id="workspace" style="display:none">
-      <div class="preview-panel">
-        <div class="video-wrap">
-          <video id="previewVideo" controls></video>
-        </div>
-        <div class="video-meta" id="videoMeta"></div>
-        <div class="preview-actions">
-          <button class="btn-back" id="btnBackToUpload">
-            <span>←</span> 上传新视频
-          </button>
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-info">
+          <div class="stat-value" id="statGenerating">0</div>
+          <div class="stat-label">生成中</div>
         </div>
       </div>
-
-      <div class="tools-panel">
-        <div class="tab-bar">
-          <button class="tab active" data-tab="effects">
-            <span class="tab-icon">✨</span> AI 特效
-          </button>
-          <button class="tab" data-tab="extend">
-            <span class="tab-icon">📐</span> 视频扩展
-          </button>
-        </div>
-
-        <div class="tab-content active" id="tab-effects">
-          <div class="intensity-control">
-            <label>特效强度</label>
-            <div class="slider-wrap">
-              <input type="range" id="intensity" min="0.1" max="1.0" step="0.05" value="0.5">
-              <span id="intensityVal">50%</span>
-            </div>
-          </div>
-          <div class="effects-grid" id="effectsGrid"></div>
-        </div>
-
-        <div class="tab-content" id="tab-extend">
-          <div class="extend-param" id="extendParam" style="display:none">
-            <label id="paramLabel">参数</label>
-            <div class="slider-wrap">
-              <input type="range" id="extendSlider" min="1" max="10" step="1" value="2">
-              <span id="extendVal">2x</span>
-            </div>
-          </div>
-          <div class="effects-grid" id="extendGrid"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Step 3: Processing -->
-    <section class="processing-panel" id="processingPanel" style="display:none">
-      <div class="processing-inner">
-        <div class="processing-anim">
-          <div class="ring ring-1"></div>
-          <div class="ring ring-2"></div>
-          <span class="processing-icon" id="processingIcon">✨</span>
-        </div>
-        <h3 id="processingTitle">处理中...</h3>
-        <p class="processing-effect-name" id="processingEffectName"></p>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-          <div class="progress-glow" id="progressGlow"></div>
-        </div>
-        <p class="progress-text" id="progressText">0%</p>
-        <p class="progress-detail" id="progressDetail"></p>
-        <button class="btn-cancel" id="btnCancel" style="display:none">取消</button>
-      </div>
-    </section>
-
-    <!-- Step 4: Result -->
-    <section class="result-panel" id="resultPanel" style="display:none">
-      <div class="result-inner">
-        <div class="result-header">
-          <span class="result-emoji">🎉</span>
-          <h2>处理完成！</h2>
-        </div>
-        <div class="video-wrap result-video-wrap">
-          <video id="resultVideo" controls></video>
-        </div>
-        <div class="result-info" id="resultInfo"></div>
-        <div class="result-actions">
-          <a class="btn-download" id="btnDownload" href="#">
-            <span>⬇️</span> 下载视频
-          </a>
-          <button class="btn-secondary" id="btnBackToEdit">
-            <span>🔄</span> 继续编辑
-          </button>
-          <button class="btn-secondary" id="btnNewVideo">
-            <span>📂</span> 新视频
-          </button>
-        </div>
-      </div>
-    </section>
-  </main>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     SECTION: Narrative Management
-     ═══════════════════════════════════════════════════════════ -->
-<div class="section" id="section-narrative">
-  <main class="main narrative-layout">
-    <!-- Left: Scene List -->
-    <aside class="scene-sidebar">
-      <div class="sidebar-header">
-        <h3>📖 場景列表</h3>
-        <button class="btn-icon" id="btnNewScene" title="新建場景">+</button>
-      </div>
-      <div class="scene-list" id="sceneList">
-        <!-- Populated by JS -->
-      </div>
-      <div class="sidebar-stats">
-        <div class="stat-item">
-          <span class="stat-num" id="statTotal">0</span>
-          <span class="stat-label">總場景</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num" id="statDraft">0</span>
-          <span class="stat-label">草稿</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num" id="statLocked">0</span>
-          <span class="stat-label">已鎖定</span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Center: Scene Editor -->
-    <div class="scene-editor">
-      <div class="editor-empty" id="editorEmpty">
-        <div class="empty-icon">📖</div>
-        <h3>選擇一個場景開始編輯</h3>
-        <p>或點擊 <strong>+</strong> 創建新場景</p>
-      </div>
-
-      <div class="editor-content" id="editorContent" style="display:none">
-        <!-- Editor Header -->
-        <div class="editor-header">
-          <div class="editor-title-row">
-            <input type="text" class="editor-title-input" id="sceneTitle" placeholder="場景標題...">
-            <div class="state-badge" id="stateBadge">DRAFT</div>
-          </div>
-          <div class="editor-meta-row">
-            <span class="meta-chip">v<span id="sceneVersion">1</span></span>
-            <span class="meta-chip" id="sceneBranch">main</span>
-            <span class="meta-chip" id="sceneUpdated">—</span>
-          </div>
-        </div>
-
-        <!-- Narrative Section -->
-        <div class="editor-section">
-          <div class="section-header">
-            <span class="section-icon">📝</span>
-            <h4>敘事描述</h4>
-          </div>
-          <div class="field-group">
-            <label>故事節拍 (Beat)</label>
-            <input type="text" id="narrativeBeat" placeholder="一行概括本場景的核心事件...">
-          </div>
-          <div class="field-group">
-            <label>詳細描述</label>
-            <textarea id="narrativeDesc" rows="3" placeholder="展開描述場景的內容..."></textarea>
-          </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label>情緒弧線</label>
-              <select id="emotionalArc">
-                <option value="">— 選擇 —</option>
-                <option value="tension">張力上升</option>
-                <option value="relief">壓力釋放</option>
-                <option value="joy">歡樂</option>
-                <option value="sorrow">悲傷</option>
-                <option value="surprise">驚奇</option>
-                <option value="suspense">懸疑</option>
-                <option value="romance">浪漫</option>
-                <option value="triumph">勝利</option>
-              </select>
-            </div>
-            <div class="field-group">
-              <label>衝突</label>
-              <input type="text" id="narrativeConflict" placeholder="場景中的主要衝突...">
-            </div>
-          </div>
-        </div>
-
-        <!-- Dialogue Section -->
-        <div class="editor-section">
-          <div class="section-header">
-            <span class="section-icon">💬</span>
-            <h4>對白</h4>
-            <button class="btn-mini" id="btnAddDialogue">+ 新增對白</button>
-          </div>
-          <div class="dialogue-list" id="dialogueList">
-            <!-- Dynamic dialogue lines -->
-          </div>
-        </div>
-
-        <!-- Visual Description -->
-        <div class="editor-section">
-          <div class="section-header">
-            <span class="section-icon">🎨</span>
-            <h4>視覺描述</h4>
-          </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label>場景地點</label>
-              <input type="text" id="visualSetting" placeholder="例：夜晚的城市街道...">
-            </div>
-            <div class="field-group">
-              <label>時間</label>
-              <select id="visualTime">
-                <option value="">— 選擇 —</option>
-                <option value="dawn">黎明</option>
-                <option value="morning">早晨</option>
-                <option value="noon">正午</option>
-                <option value="afternoon">下午</option>
-                <option value="dusk">黃昏</option>
-                <option value="night">夜晚</option>
-              </select>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label>鏡頭類型</label>
-              <select id="cameraShot">
-                <option value="close_up">特寫</option>
-                <option value="medium" selected>中景</option>
-                <option value="wide">全景</option>
-                <option value="aerial">航拍</option>
-                <option value="tracking">跟拍</option>
-              </select>
-            </div>
-            <div class="field-group">
-              <label>燈光風格</label>
-              <select id="lightingStyle">
-                <option value="natural">自然光</option>
-                <option value="dramatic">戲劇光</option>
-                <option value="soft">柔和光</option>
-                <option value="high_key">高調</option>
-                <option value="low_key">低調</option>
-              </select>
-            </div>
-          </div>
-          <div class="field-group">
-            <label>動作描述</label>
-            <textarea id="visualAction" rows="2" placeholder="角色動作、物體運動..."></textarea>
-          </div>
-        </div>
-
-        <!-- State Machine Controls -->
-        <div class="editor-section">
-          <div class="section-header">
-            <span class="section-icon">🔄</span>
-            <h4>狀態管理</h4>
-          </div>
-          <div class="state-machine">
-            <div class="state-flow">
-              <div class="state-node active" data-state="DRAFT">DRAFT</div>
-              <div class="state-arrow">→</div>
-              <div class="state-node" data-state="REVIEW">REVIEW</div>
-              <div class="state-arrow">→</div>
-              <div class="state-node" data-state="LOCKED">LOCKED</div>
-              <div class="state-arrow">→</div>
-              <div class="state-node" data-state="COMPLETED">COMPLETED</div>
-            </div>
-            <div class="state-actions" id="stateActions">
-              <!-- Populated by JS based on current state -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Ripple Analysis -->
-        <div class="editor-section">
-          <div class="section-header">
-            <span class="section-icon">🌊</span>
-            <h4>漣漪效應分析</h4>
-            <button class="btn-mini" id="btnAnalyze">🔍 分析</button>
-          </div>
-          <div class="ripple-results" id="rippleResults">
-            <div class="ripple-empty">
-              <span>點擊「分析」檢查此場景修改對後續場景的影響</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Save Bar -->
-        <div class="editor-save-bar">
-          <button class="btn-secondary" id="btnDiscard">捨棄更改</button>
-          <button class="btn-primary" id="btnSave">
-            <span>💾</span> 保存場景
-          </button>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <div class="stat-value" id="statCompleted">0</div>
+          <div class="stat-label">已完成</div>
         </div>
       </div>
     </div>
 
-    <!-- Right: Properties Panel -->
-    <aside class="props-panel" id="propsPanel">
-      <div class="props-header">
-        <h4>🏷️ 屬性</h4>
-      </div>
-      <div class="props-body">
-        <div class="field-group">
-          <label>類型標籤</label>
-          <div class="tag-input-wrap">
-            <input type="text" id="tagInput" placeholder="添加標籤...">
-            <div class="tag-list" id="tagList"></div>
-          </div>
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <h3>🎯 最近項目</h3>
+          <button class="btn-text" onclick="app.navigate('projects')">查看全部</button>
         </div>
-        <div class="field-group">
-          <label>預估時長 (秒)</label>
-          <input type="number" id="durationEst" min="1" max="600" value="30" step="1">
-        </div>
-        <div class="field-group">
-          <label>複雜度評分</label>
-          <div class="complexity-bar">
-            <input type="range" id="complexityScore" min="0" max="1" step="0.1" value="0.5">
-            <span id="complexityVal">0.5</span>
-          </div>
-        </div>
-        <div class="field-group">
-          <label>備註</label>
-          <textarea id="sceneNotes" rows="3" placeholder="場景備註..."></textarea>
-        </div>
-
-        <div class="props-section">
-          <h4>👥 角色依賴</h4>
-          <div class="dependency-list" id="characterDeps">
-            <div class="dep-empty">尚無角色關聯</div>
-          </div>
-        </div>
-
-        <div class="props-section">
-          <h4>🎭 道具依賴</h4>
-          <div class="dependency-list" id="propDeps">
-            <div class="dep-empty">尚無道具關聯</div>
-          </div>
-        </div>
-
-        <div class="props-section">
-          <h4>📋 審計日誌</h4>
-          <div class="audit-log" id="auditLog">
-            <div class="audit-empty">尚無操作記錄</div>
+        <div class="card-content" id="recentProjects">
+          <div class="empty-state">
+            <p>暫無項目</p>
           </div>
         </div>
       </div>
-    </aside>
-  </main>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SECTION: Graph View
-     ═══════════════════════════════════════════════════════════ -->
-<div class="section" id="section-graph">
-  <main class="main graph-layout">
-    <div class="graph-toolbar">
-      <h3>🕸️ 劇情依賴圖譜</h3>
-      <div class="graph-controls">
-        <button class="btn-mini" id="btnZoomFit">🔲 適應</button>
-        <button class="btn-mini" id="btnGraphRefresh">🔄 刷新</button>
-        <select id="graphLayout">
-          <option value="force">力導向佈局</option>
-          <option value="tree">樹狀佈局</option>
-          <option value="radial">放射佈局</option>
+      <div class="card">
+        <div class="card-header">
+          <h3>⚡ 生成隊列</h3>
+          <button class="btn-text" onclick="app.refreshQueue()">刷新</button>
+        </div>
+        <div class="card-content" id="generationQueue">
+          <div class="empty-state">
+            <p>隊列為空</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Projects ═══ -->
+  <section class="section" id="section-projects">
+    <div class="section-header">
+      <h1>項目管理</h1>
+      <button class="btn-primary" onclick="projects.showCreateModal()">
+        <span>+</span> 新建項目
+      </button>
+    </div>
+
+    <div class="projects-grid" id="projectsList">
+      <div class="empty-state large">
+        <div class="empty-icon">📁</div>
+        <h3>暫無項目</h3>
+        <p>點擊右上角創建第一個項目</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Scenes ═══ -->
+  <section class="section" id="section-scenes">
+    <div class="section-header">
+      <h1>場景管理</h1>
+      <div class="header-actions">
+        <select class="select" id="projectFilter">
+          <option value="">所有項目</option>
         </select>
+        <button class="btn-primary" onclick="scenes.showCreateModal()">
+          <span>+</span> 新建場景
+        </button>
       </div>
     </div>
-    <div class="graph-canvas-wrap">
-      <canvas id="graphCanvas"></canvas>
-      <div class="graph-legend">
-        <div class="legend-item"><span class="legend-dot scene"></span> 場景</div>
-        <div class="legend-item"><span class="legend-dot character"></span> 角色</div>
-        <div class="legend-item"><span class="legend-dot prop"></span> 道具</div>
-        <div class="legend-separator"></div>
-        <div class="legend-item"><span class="legend-line leads"></span> LEADS_TO</div>
-        <div class="legend-item"><span class="legend-line contains"></span> CONTAINS</div>
-        <div class="legend-item"><span class="legend-line requires"></span> REQUIRES</div>
+
+    <div class="scenes-list" id="scenesList">
+      <div class="empty-state large">
+        <div class="empty-icon">🎬</div>
+        <h3>暫無場景</h3>
+        <p>選擇項目後創建場景</p>
       </div>
     </div>
-    <div class="graph-sidebar">
-      <h4>節點詳情</h4>
-      <div class="graph-node-detail" id="graphNodeDetail">
-        <div class="dep-empty">點擊圖譜節點查看詳情</div>
+  </section>
+
+  <!-- ═══ Generate ═══ -->
+  <section class="section" id="section-generate">
+    <div class="section-header">
+      <h1>視頻生成</h1>
+    </div>
+
+    <div class="generate-container">
+      <div class="card">
+        <div class="card-header">
+          <h3>📝 提示詞優化</h3>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label>原始提示詞</label>
+            <textarea id="promptInput" rows="4" placeholder="輸入簡單的描述，例如：一個人在海邊散步..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>風格</label>
+              <select id="promptStyle">
+                <option value="cinematic">電影級</option>
+                <option value="anime">動畫</option>
+                <option value="realistic">寫實</option>
+                <option value="3d">3D 渲染</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="prompts.optimize()">
+            ✨ 優化提示詞
+          </button>
+
+          <div id="promptResult" class="result-box" style="display:none">
+            <div class="result-header">
+              <h4>優化結果</h4>
+              <span class="quality-badge" id="qualityScore">質量：0.85</span>
+            </div>
+            <div class="result-content">
+              <label>優化後提示詞</label>
+              <textarea id="optimizedPrompt" rows="3" readonly></textarea>
+              <label>負向提示詞</label>
+              <textarea id="negativePrompt" rows="2" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>🎬 生成任務</h3>
+          <button class="btn-text" onclick="generation.refreshQueue()">刷新</button>
+        </div>
+        <div class="card-content" id="generateTasks">
+          <div class="empty-state">
+            <p>暫無生成任務</p>
+          </div>
+        </div>
       </div>
     </div>
-  </main>
+  </section>
+
+</main>
+
+<!-- ═══ Modals ═══ -->
+
+<!-- Create Project Modal -->
+<div class="modal" id="createProjectModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>新建項目</h3>
+      <button class="modal-close" onclick="projects.closeCreateModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>項目名稱</label>
+        <input type="text" id="projectName" placeholder="輸入項目名稱">
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="projectDescription" rows="3" placeholder="項目描述..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="projects.closeCreateModal()">取消</button>
+      <button class="btn-primary" onclick="projects.create()">創建</button>
+    </div>
+  </div>
 </div>
 
-<!-- Toast -->
+<!-- Create Scene Modal -->
+<div class="modal" id="createSceneModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>新建場景</h3>
+      <button class="modal-close" onclick="scenes.closeCreateModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>場景標題</label>
+        <input type="text" id="sceneTitle" placeholder="場景標題">
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="sceneDescription" rows="2" placeholder="場景描述..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>敘事文本</label>
+        <textarea id="sceneNarrative" rows="4" placeholder="詳細的敘事描述..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>正向提示詞</label>
+        <textarea id="scenePositivePrompt" rows="2" placeholder="cinematic shot, masterpiece..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>負向提示詞</label>
+        <textarea id="sceneNegativePrompt" rows="2" placeholder="ugly, deformed, low quality..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="scenes.closeCreateModal()">取消</button>
+      <button class="btn-primary" onclick="scenes.create()">創建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scene Detail Modal -->
+<div class="modal" id="sceneDetailModal">
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <h3 id="sceneDetailTitle">場景詳情</h3>
+      <button class="modal-close" onclick="scenes.closeDetailModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="scene-detail">
+        <div class="detail-row">
+          <span class="detail-label">狀態:</span>
+          <span class="status-badge" id="sceneDetailStatus">draft</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">版本:</span>
+          <span id="sceneDetailVersion">1.0.0</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">時長:</span>
+          <span id="sceneDetailDuration">5.0s</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">解析度:</span>
+          <span id="sceneDetailResolution">1920x1080</span>
+        </div>
+        <div class="detail-section">
+          <h4>描述</h4>
+          <p id="sceneDetailDescription"></p>
+        </div>
+        <div class="detail-section">
+          <h4>敘事文本</h4>
+          <p id="sceneDetailNarrative"></p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="scenes.closeDetailModal()">關閉</button>
+      <button class="btn-warning" onclick="scenes.transitionToReview()">提交審核</button>
+      <button class="btn-primary" onclick="scenes.submitGeneration()">生成視頻</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Footer -->
-<footer class="footer">
-  <span>AVP — AI Video Production Platform</span>
-  <span class="footer-dot">·</span>
-  <span>FastAPI · PostgreSQL · Neo4j · Milvus</span>
-</footer>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="loading-spinner"></div>
+  <p id="loadingText">加載中...</p>
+</div>
 
+<script src="/static/js/api.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
