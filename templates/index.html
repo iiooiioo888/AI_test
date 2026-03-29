@@ -6,37 +6,83 @@
 <title>AVP Studio - 企業級 AI 視頻生產平台</title>
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
+<!-- Animated Background Particles -->
+<div class="bg-animation">
+  <div class="particle" style="--x: 10%; --y: 20%; --size: 4px; --duration: 20s;"></div>
+  <div class="particle" style="--x: 20%; --y: 80%; --size: 6px; --duration: 25s;"></div>
+  <div class="particle" style="--x: 30%; --y: 40%; --size: 3px; --duration: 18s;"></div>
+  <div class="particle" style="--x: 40%; --y: 60%; --size: 5px; --duration: 22s;"></div>
+  <div class="particle" style="--x: 50%; --y: 10%; --size: 4px; --duration: 24s;"></div>
+  <div class="particle" style="--x: 60%; --y: 90%; --size: 6px; --duration: 20s;"></div>
+  <div class="particle" style="--x: 70%; --y: 30%; --size: 3px; --duration: 19s;"></div>
+  <div class="particle" style="--x: 80%; --y: 70%; --size: 5px; --duration: 23s;"></div>
+  <div class="particle" style="--x: 90%; --y: 50%; --size: 4px; --duration: 21s;"></div>
+  <div class="gradient-orb gradient-orb-1"></div>
+  <div class="gradient-orb gradient-orb-2"></div>
+  <div class="gradient-orb gradient-orb-3"></div>
+</div>
+
 <!-- ═══ Header ═══ -->
 <header class="header">
-  <div class="logo">
-    <span class="logo-icon">🎬</span>
-    <span class="logo-text">AVP Studio</span>
-    <span class="logo-badge">PRO</span>
+  <div class="logo" onclick="app.navigate('dashboard')">
+    <div class="logo-wrapper">
+      <span class="logo-icon">🎬</span>
+      <div class="logo-ring"></div>
+    </div>
+    <div class="logo-text-wrapper">
+      <span class="logo-text">AVP Studio</span>
+      <span class="logo-subtitle">AI Video Production</span>
+    </div>
+    <div class="logo-badge-wrapper">
+      <span class="logo-badge">PRO</span>
+      <div class="badge-glow"></div>
+    </div>
   </div>
+  
   <nav class="header-nav">
     <button class="nav-tab active" data-section="dashboard">
-      <span class="nav-icon">📊</span> 儀表板
+      <span class="nav-icon">📊</span>
+      <span class="nav-text">儀表板</span>
+      <div class="nav-indicator"></div>
     </button>
     <button class="nav-tab" data-section="projects">
-      <span class="nav-icon">📁</span> 項目
+      <span class="nav-icon">📁</span>
+      <span class="nav-text">項目</span>
+      <div class="nav-indicator"></div>
     </button>
     <button class="nav-tab" data-section="scenes">
-      <span class="nav-icon">🎬</span> 場景
+      <span class="nav-icon">🎬</span>
+      <span class="nav-text">場景</span>
+      <div class="nav-indicator"></div>
     </button>
     <button class="nav-tab" data-section="generate">
-      <span class="nav-icon">✨</span> 生成
+      <span class="nav-icon">✨</span>
+      <span class="nav-text">生成</span>
+      <div class="nav-indicator"></div>
     </button>
   </nav>
+  
   <div class="header-right">
     <div class="health-status" id="healthStatus">
-      <span class="status-dot"></span>
-      <span class="status-text">就緒</span>
+      <div class="status-wrapper">
+        <span class="status-dot"></span>
+        <span class="status-ring"></span>
+      </div>
+      <span class="status-text">系統正常</span>
     </div>
-    <button class="btn-icon" id="userMenu" title="用戶菜單">👤</button>
+    
+    <button class="btn-icon" id="notificationBtn" title="通知">
+      <span>🔔</span>
+      <span class="notification-badge">3</span>
+    </button>
+    
+    <button class="btn-icon" id="userMenu" title="用戶菜單">
+      <span>👤</span>
+    </button>
   </div>
 </header>
 
@@ -46,62 +92,121 @@
   <!-- ═══ Dashboard ═══ -->
   <section class="section active" id="section-dashboard">
     <div class="section-header">
-      <h1>儀表板</h1>
-      <p>系統狀態與統計</p>
+      <div class="header-title">
+        <h1>儀表板</h1>
+        <p>系統狀態與實時統計</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="app.loadDashboard()">
+          <span>🔄</span> 刷新
+        </button>
+        <button class="btn-primary" onclick="projects.showCreateModal()">
+          <span>+</span> 新建項目
+        </button>
+      </div>
     </div>
 
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">📁</div>
+      <div class="stat-card stat-card-primary" onclick="app.navigate('projects')">
+        <div class="stat-card-bg"></div>
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">📁</div>
+          <div class="stat-icon-glow"></div>
+        </div>
         <div class="stat-info">
           <div class="stat-value" id="statProjects">0</div>
           <div class="stat-label">項目總數</div>
+          <div class="stat-trend">
+            <span class="trend-icon">📈</span>
+            <span class="trend-text">較上月 +12%</span>
+          </div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon">🎬</div>
+      
+      <div class="stat-card stat-card-success" onclick="app.navigate('scenes')">
+        <div class="stat-card-bg"></div>
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">🎬</div>
+          <div class="stat-icon-glow"></div>
+        </div>
         <div class="stat-info">
           <div class="stat-value" id="statScenes">0</div>
           <div class="stat-label">場景總數</div>
+          <div class="stat-trend">
+            <span class="trend-icon">📈</span>
+            <span class="trend-text">較上月 +18%</span>
+          </div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon">⚡</div>
+      
+      <div class="stat-card stat-card-warning" onclick="app.navigate('generate')">
+        <div class="stat-card-bg"></div>
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-icon-glow"></div>
+        </div>
         <div class="stat-info">
           <div class="stat-value" id="statGenerating">0</div>
           <div class="stat-label">生成中</div>
+          <div class="stat-trend">
+            <span class="trend-icon">⏱️</span>
+            <span class="trend-text">平均 2.5 分鐘</span>
+          </div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon">✅</div>
+      
+      <div class="stat-card stat-card-completed" onclick="app.navigate('generate')">
+        <div class="stat-card-bg"></div>
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">✅</div>
+          <div class="stat-icon-glow"></div>
+        </div>
         <div class="stat-info">
           <div class="stat-value" id="statCompleted">0</div>
           <div class="stat-label">已完成</div>
+          <div class="stat-trend">
+            <span class="trend-icon">🎉</span>
+            <span class="trend-text">成功率 98.5%</span>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="dashboard-grid">
-      <div class="card">
+      <div class="card card-glass">
         <div class="card-header">
-          <h3>🎯 最近項目</h3>
-          <button class="btn-text" onclick="app.navigate('projects')">查看全部</button>
+          <div class="card-title">
+            <span class="title-icon">🎯</span>
+            <h3>最近項目</h3>
+          </div>
+          <button class="btn-text" onclick="app.navigate('projects')">
+            查看全部 <span class="arrow">→</span>
+          </button>
         </div>
         <div class="card-content" id="recentProjects">
           <div class="empty-state">
-            <p>暫無項目</p>
+            <div class="empty-icon">📁</div>
+            <h3>暫無項目</h3>
+            <p>點擊右上角創建第一個項目</p>
           </div>
         </div>
       </div>
 
-      <div class="card">
+      <div class="card card-glass">
         <div class="card-header">
-          <h3>⚡ 生成隊列</h3>
-          <button class="btn-text" onclick="app.refreshQueue()">刷新</button>
+          <div class="card-title">
+            <span class="title-icon">⚡</span>
+            <h3>生成隊列</h3>
+          </div>
+          <button class="btn-text" onclick="generation.refreshQueue()">
+            <span>🔄</span> 刷新
+          </button>
         </div>
         <div class="card-content" id="generationQueue">
           <div class="empty-state">
-            <p>隊列為空</p>
+            <div class="empty-icon">⏳</div>
+            <h3>隊列為空</h3>
+            <p>暫無正在進行的生成任務</p>
           </div>
         </div>
       </div>
@@ -111,10 +216,19 @@
   <!-- ═══ Projects ═══ -->
   <section class="section" id="section-projects">
     <div class="section-header">
-      <h1>項目管理</h1>
-      <button class="btn-primary" onclick="projects.showCreateModal()">
-        <span>+</span> 新建項目
-      </button>
+      <div class="header-title">
+        <h1>項目管理</h1>
+        <p>創建和管理您的視頻項目</p>
+      </div>
+      <div class="header-actions">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" placeholder="搜索項目..." id="projectSearch">
+        </div>
+        <button class="btn-primary" onclick="projects.showCreateModal()">
+          <span>+</span> 新建項目
+        </button>
+      </div>
     </div>
 
     <div class="projects-grid" id="projectsList">
@@ -122,6 +236,9 @@
         <div class="empty-icon">📁</div>
         <h3>暫無項目</h3>
         <p>點擊右上角創建第一個項目</p>
+        <button class="btn-primary mt-6" onclick="projects.showCreateModal()">
+          <span>+</span> 創建項目
+        </button>
       </div>
     </div>
   </section>
@@ -129,7 +246,10 @@
   <!-- ═══ Scenes ═══ -->
   <section class="section" id="section-scenes">
     <div class="section-header">
-      <h1>場景管理</h1>
+      <div class="header-title">
+        <h1>場景管理</h1>
+        <p>管理項目場景與狀態</p>
+      </div>
       <div class="header-actions">
         <select class="select" id="projectFilter">
           <option value="">所有項目</option>
@@ -152,57 +272,105 @@
   <!-- ═══ Generate ═══ -->
   <section class="section" id="section-generate">
     <div class="section-header">
-      <h1>視頻生成</h1>
+      <div class="header-title">
+        <h1>視頻生成</h1>
+        <p>AI 驅動的智能視頻生成</p>
+      </div>
     </div>
 
     <div class="generate-container">
-      <div class="card">
+      <div class="card card-glass card-large">
         <div class="card-header">
-          <h3>📝 提示詞優化</h3>
+          <div class="card-title">
+            <span class="title-icon">✨</span>
+            <h3>提示詞優化</h3>
+          </div>
+          <div class="card-badge">AI Power</div>
         </div>
         <div class="card-content">
           <div class="form-group">
-            <label>原始提示詞</label>
+            <label class="form-label">
+              <span class="label-icon">📝</span>
+              原始提示詞
+            </label>
             <textarea id="promptInput" rows="4" placeholder="輸入簡單的描述，例如：一個人在海邊散步..."></textarea>
+            <div class="input-hint">
+              <span>💡</span>
+              <span>使用具體的描述可以獲得更好的生成效果</span>
+            </div>
           </div>
+          
           <div class="form-row">
             <div class="form-group">
-              <label>風格</label>
-              <select id="promptStyle">
-                <option value="cinematic">電影級</option>
-                <option value="anime">動畫</option>
-                <option value="realistic">寫實</option>
-                <option value="3d">3D 渲染</option>
+              <label class="form-label">
+                <span class="label-icon">🎨</span>
+                風格
+              </label>
+              <select id="promptStyle" class="select-lg">
+                <option value="cinematic">🎬 電影級</option>
+                <option value="anime">🎌 動畫</option>
+                <option value="realistic">📷 寫實</option>
+                <option value="3d">🎮 3D 渲染</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">
+                <span class="label-icon">⏱️</span>
+                時長
+              </label>
+              <select id="promptDuration" class="select-lg">
+                <option value="3">3 秒</option>
+                <option value="5" selected>5 秒</option>
+                <option value="10">10 秒</option>
+                <option value="15">15 秒</option>
               </select>
             </div>
           </div>
-          <button class="btn-primary" onclick="prompts.optimize()">
-            ✨ 優化提示詞
+          
+          <button class="btn-primary btn-lg" onclick="prompts.optimize()">
+            <span class="btn-icon-text">✨</span>
+            <span>智能優化提示詞</span>
+            <span class="btn-shine"></span>
           </button>
 
           <div id="promptResult" class="result-box" style="display:none">
             <div class="result-header">
-              <h4>優化結果</h4>
-              <span class="quality-badge" id="qualityScore">質量：0.85</span>
+              <div class="result-title">
+                <h4>優化結果</h4>
+                <span class="quality-badge" id="qualityScore">
+                  <span class="quality-icon">⭐</span>
+                  <span class="quality-value">0.85</span>
+                </span>
+              </div>
+              <button class="btn-text" onclick="prompts.copyResult()">
+                📋 複製
+              </button>
             </div>
             <div class="result-content">
-              <label>優化後提示詞</label>
+              <label class="result-label">優化後提示詞</label>
               <textarea id="optimizedPrompt" rows="3" readonly></textarea>
-              <label>負向提示詞</label>
+              <label class="result-label mt-4">負向提示詞</label>
               <textarea id="negativePrompt" rows="2" readonly></textarea>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card">
+      <div class="card card-glass card-large">
         <div class="card-header">
-          <h3>🎬 生成任務</h3>
-          <button class="btn-text" onclick="generation.refreshQueue()">刷新</button>
+          <div class="card-title">
+            <span class="title-icon">🎬</span>
+            <h3>生成任務</h3>
+          </div>
+          <button class="btn-text" onclick="generation.refreshQueue()">
+            <span>🔄</span> 刷新
+          </button>
         </div>
         <div class="card-content" id="generateTasks">
           <div class="empty-state">
-            <p>暫無生成任務</p>
+            <div class="empty-icon">🎬</div>
+            <h3>暫無生成任務</h3>
+            <p>優化提示詞後開始生成視頻</p>
           </div>
         </div>
       </div>
@@ -215,116 +383,183 @@
 
 <!-- Create Project Modal -->
 <div class="modal" id="createProjectModal">
-  <div class="modal-content">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content modal-animated">
     <div class="modal-header">
-      <h3>新建項目</h3>
-      <button class="modal-close" onclick="projects.closeCreateModal()">×</button>
+      <div class="modal-title">
+        <span class="modal-icon">📁</span>
+        <h3>新建項目</h3>
+      </div>
+      <button class="modal-close" onclick="projects.closeCreateModal()">
+        <span>×</span>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>項目名稱</label>
-        <input type="text" id="projectName" placeholder="輸入項目名稱">
+        <label class="form-label">
+          <span class="label-icon">📝</span>
+          項目名稱
+        </label>
+        <input type="text" id="projectName" placeholder="輸入項目名稱" class="input-lg">
       </div>
       <div class="form-group">
-        <label>描述</label>
-        <textarea id="projectDescription" rows="3" placeholder="項目描述..."></textarea>
+        <label class="form-label">
+          <span class="label-icon">📄</span>
+          描述
+        </label>
+        <textarea id="projectDescription" rows="3" placeholder="項目描述..." class="textarea-lg"></textarea>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="projects.closeCreateModal()">取消</button>
-      <button class="btn-primary" onclick="projects.create()">創建</button>
+      <button class="btn-primary" onclick="projects.create()">
+        <span>✨</span> 創建項目
+      </button>
     </div>
   </div>
 </div>
 
 <!-- Create Scene Modal -->
 <div class="modal" id="createSceneModal">
-  <div class="modal-content">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content modal-animated modal-large">
     <div class="modal-header">
-      <h3>新建場景</h3>
-      <button class="modal-close" onclick="scenes.closeCreateModal()">×</button>
+      <div class="modal-title">
+        <span class="modal-icon">🎬</span>
+        <h3>新建場景</h3>
+      </div>
+      <button class="modal-close" onclick="scenes.closeCreateModal()">
+        <span>×</span>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>場景標題</label>
-        <input type="text" id="sceneTitle" placeholder="場景標題">
+        <label class="form-label">
+          <span class="label-icon">📝</span>
+          場景標題
+        </label>
+        <input type="text" id="sceneTitle" placeholder="場景標題" class="input-lg">
       </div>
       <div class="form-group">
-        <label>描述</label>
-        <textarea id="sceneDescription" rows="2" placeholder="場景描述..."></textarea>
+        <label class="form-label">
+          <span class="label-icon">📄</span>
+          描述
+        </label>
+        <textarea id="sceneDescription" rows="2" placeholder="場景描述..." class="textarea-lg"></textarea>
       </div>
       <div class="form-group">
-        <label>敘事文本</label>
-        <textarea id="sceneNarrative" rows="4" placeholder="詳細的敘事描述..."></textarea>
+        <label class="form-label">
+          <span class="label-icon">📖</span>
+          敘事文本
+        </label>
+        <textarea id="sceneNarrative" rows="4" placeholder="詳細的敘事描述..." class="textarea-lg"></textarea>
       </div>
-      <div class="form-group">
-        <label>正向提示詞</label>
-        <textarea id="scenePositivePrompt" rows="2" placeholder="cinematic shot, masterpiece..."></textarea>
-      </div>
-      <div class="form-group">
-        <label>負向提示詞</label>
-        <textarea id="sceneNegativePrompt" rows="2" placeholder="ugly, deformed, low quality..."></textarea>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-icon">✨</span>
+            正向提示詞
+          </label>
+          <textarea id="scenePositivePrompt" rows="2" placeholder="cinematic shot, masterpiece..." class="textarea-lg"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-icon">🚫</span>
+            負向提示詞
+          </label>
+          <textarea id="sceneNegativePrompt" rows="2" placeholder="ugly, deformed, low quality..." class="textarea-lg"></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="scenes.closeCreateModal()">取消</button>
-      <button class="btn-primary" onclick="scenes.create()">創建</button>
+      <button class="btn-primary" onclick="scenes.create()">
+        <span>✨</span> 創建場景
+      </button>
     </div>
   </div>
 </div>
 
 <!-- Scene Detail Modal -->
 <div class="modal" id="sceneDetailModal">
-  <div class="modal-content modal-large">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content modal-animated modal-large">
     <div class="modal-header">
-      <h3 id="sceneDetailTitle">場景詳情</h3>
-      <button class="modal-close" onclick="scenes.closeDetailModal()">×</button>
+      <div class="modal-title">
+        <span class="modal-icon">🎬</span>
+        <h3 id="sceneDetailTitle">場景詳情</h3>
+      </div>
+      <button class="modal-close" onclick="scenes.closeDetailModal()">
+        <span>×</span>
+      </button>
     </div>
     <div class="modal-body">
       <div class="scene-detail">
-        <div class="detail-row">
-          <span class="detail-label">狀態:</span>
-          <span class="status-badge" id="sceneDetailStatus">draft</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">版本:</span>
-          <span id="sceneDetailVersion">1.0.0</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">時長:</span>
-          <span id="sceneDetailDuration">5.0s</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">解析度:</span>
-          <span id="sceneDetailResolution">1920x1080</span>
-        </div>
-        <div class="detail-section">
-          <h4>描述</h4>
-          <p id="sceneDetailDescription"></p>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">狀態</span>
+            <span class="status-badge" id="sceneDetailStatus">draft</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">版本</span>
+            <span class="detail-value" id="sceneDetailVersion">1.0.0</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">時長</span>
+            <span class="detail-value" id="sceneDetailDuration">5.0s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">解析度</span>
+            <span class="detail-value" id="sceneDetailResolution">1920x1080</span>
+          </div>
         </div>
         <div class="detail-section">
-          <h4>敘事文本</h4>
-          <p id="sceneDetailNarrative"></p>
+          <h4 class="detail-title">📄 描述</h4>
+          <p id="sceneDetailDescription" class="detail-text"></p>
+        </div>
+        <div class="detail-section">
+          <h4 class="detail-title">📖 敘事文本</h4>
+          <p id="sceneDetailNarrative" class="detail-text"></p>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="scenes.closeDetailModal()">關閉</button>
-      <button class="btn-warning" onclick="scenes.transitionToReview()">提交審核</button>
-      <button class="btn-primary" onclick="scenes.submitGeneration()">生成視頻</button>
+      <button class="btn-warning" onclick="scenes.transitionToReview()">
+        <span>📤</span> 提交審核
+      </button>
+      <button class="btn-primary" onclick="scenes.submitGeneration()">
+        <span>✨</span> 生成視頻
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Toast Notifications -->
+<!-- ═══ Toast Notifications ═══ -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Loading Overlay -->
+<!-- ═══ Loading Overlay ═══ -->
 <div class="loading-overlay" id="loadingOverlay" style="display:none">
-  <div class="loading-spinner"></div>
-  <p id="loadingText">加載中...</p>
+  <div class="loading-content">
+    <div class="loading-spinner-wrapper">
+      <div class="loading-spinner"></div>
+      <div class="loading-ring"></div>
+      <div class="loading-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+      </div>
+    </div>
+    <p id="loadingText" class="loading-text">加載中...</p>
+    <div class="loading-progress">
+      <div class="loading-bar"></div>
+    </div>
+  </div>
 </div>
 
+<!-- ═══ JavaScript ═══ -->
 <script src="/static/js/api.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
