@@ -14,11 +14,12 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)](https://postgresql.org)
 [![Neo4j](https://img.shields.io/badge/Neo4j-5.x-018BFF?style=flat-square&logo=neo4j)](https://neo4j.com)
 [![Milvus](https://img.shields.io/badge/Milvus-2.5-00A1EA?style=flat-square&logo=milvus)](https://milvus.io)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=flat-square&logo=githubactions)](.github/workflows/ci-cd.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 &nbsp;
 
-[**快速開始**](#-快速開始) · [**核心功能**](#-核心功能) · [**架構**](#️-架構) · [**UI 展示**](#-ui-展示) · [**API**](#-api) · [**安全**](#-安全防護) · [**部署**](#-部署)
+[**快速開始**](#-快速開始) · [**核心功能**](#-核心功能) · [**架構**](#️-架構) · [**UI 展示**](#-ui-展示) · [**API**](#-api) · [**安全**](#-安全防護) · [**CI/CD**](#-cicd) · [**部署**](#-部署) · [**任務待開發**](#-任務待開發)
 
 &nbsp;
 
@@ -260,13 +261,9 @@ cp .env.example .env
 ```bash
 # 驗證所有組件
 ./scripts/verify.sh
-
-# 運行單元測試
-./scripts/test.sh
-
-# 負載測試
-python tests/load_test.py
 ```
+
+> 📌 測試由 CI/CD Pipeline 自動執行，詳見 [CI/CD](#-cicd) 章節。
 
 ---
 
@@ -443,29 +440,59 @@ async def create_scene(scene_data: dict):
 
 ---
 
-## 🧪 測試
+## 🔄 CI/CD
 
-### 運行單元測試
+### GitHub Actions Pipeline
 
-```bash
-# 安裝測試依賴
-pip install pytest pytest-async pytest-cov
+本項目使用 GitHub Actions 實現持續集成/持續部署，自動執行代碼檢查、構建與部署。
 
-# 運行測試
-python -m pytest tests/unit/ -v
+```yaml
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
 
-# 帶覆蓋率報告
-python -m pytest tests/unit/ --cov=app --cov-report=html
-```
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
 
-### 負載測試
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install black flake8
+      - run: black --check app/ tests/
+      - run: flake8 app/ tests/
 
-```bash
-# 安裝依賴
-pip install aiohttp
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt pytest pytest-cov
+      - run: python -m pytest tests/unit/ -v --cov=app --cov-report=xml
+      - uses: codecov/codecov-action@v4
 
-# 運行負載測試
-python tests/load_test.py
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t avp-studio:${{ github.sha }} .
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - run: echo "Deploy to production"
 ```
 
 ### 測試覆蓋率
@@ -609,6 +636,32 @@ STORAGE_PATH=./storage
 
 ---
 
+## 📋 任務待開發
+
+> **Role: 高級後端架構師 (敘事系統專項)**
+> **Task: 構建企業級 AI 敘事與劇本管理核心**
+> **Context: 項目 Nexus - 企業級 AI 視頻生產平台**
+
+### 1. 數據模型 (Data Model)
+
+- [ ] **關係型 (PostgreSQL)**: 定義 `scenes` 表，包含 JSONB 字段 `content` (對白/動作), `metadata` (時長/地點), `status` (狀態機)。必須包含 `version` (SemVer) 與 `audit_log` (操作審計)。
+- [ ] **圖數據庫 (Neo4j)**: 定義節點 `Scene`, `Character`, `Prop`。建立關係 `LEADS_TO` (劇情順序), `CONTAINS` (包含角色), `REQUIRES` (道具依賴)。創建唯一約束與索引。
+- [ ] **向量庫 (Milvus)**: 存儲場景語義向量 (768 維)，用於相似度檢索與衝突檢測。
+
+### 2. 核心邏輯 (Core Logic)
+
+- [ ] **狀態機**: 實現 `SceneStateMachine` 類，嚴格控制 `DRAFT → REVIEW → LOCKED → COMPLETED` 轉移，非法轉移拋出 `StateTransitionError`。
+- [ ] **漣漪效應**: 實現 `RippleEffectAnalyzer` 類。當場景修改時，遍歷 Neo4j `LEADS_TO` 關係，檢查後續場景的角色狀態 (如：死亡後不能出現) 與道具邏輯。返回衝突報告。
+- [ ] **協作同步**: 集成 Yjs (CRDT 算法)，支持多人實時編輯同一劇本字段，實現字段級鎖 (Field-Level Lock)。
+
+### 3. API 規範 (API Contract)
+
+- [ ] `PATCH /scenes/{id}`: 支持部分更新，觸發漣漪分析。返回 200 (成功) 或 409 (衝突)。
+- [ ] `GET /scripts/{id}/graph`: 返回劇情依賴圖譜 (JSON 格式)。
+- [ ] `POST /scenes/{id}/branch`: 創建劇情分支，複製後續節點並生成新版本 ID。
+
+---
+
 ## 🤝 貢獻
 
 ### 開發環境設置
@@ -624,15 +677,14 @@ source venv/bin/activate
 
 # 3. 安裝開發依賴
 pip install -r requirements.txt
-pip install pytest pytest-async pytest-cov black flake8
+pip install black flake8
 
-# 4. 運行測試
-python -m pytest tests/unit/ -v
-
-# 5. 代碼格式化
+# 4. 代碼格式化
 black app/ tests/
 flake8 app/ tests/
 ```
+
+> 📌 推送代碼後 CI/CD Pipeline 將自動執行測試與覆蓋率檢查。
 
 ### 提交規範
 
